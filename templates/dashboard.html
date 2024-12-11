@@ -1,0 +1,320 @@
+{% extends "base.html" %} {% block title %}Dashboard{% endblock %} {% block
+content %}
+<div class="dashboard-container">
+  <h2>Welcome, {{ user.email }}</h2>
+
+  {% if messages %} {% for message in messages %}
+  <div class="alert alert-{{ message.type }}">{{ message.text }}</div>
+  {% endfor %} {% endif %}
+
+  <div class="settings-card">
+    <h3>Bot Settings</h3>
+    <div class="bot-controls">
+      <div class="bot-status">
+        <h4>
+          Status:
+          <span
+            class="status-badge {% if is_running %}status-running{% else %}status-stopped{% endif %}"
+          >
+            {% if is_running %}Running{% else %}Stopped{% endif %}
+          </span>
+        </h4>
+        <form
+          method="POST"
+          action="{{ '/stop-bot' if is_running else '/start-bot' }}"
+        >
+          <button
+            type="submit"
+            class="button {{ 'danger' if is_running else 'primary' }}"
+          >
+            {{ 'Stop Bot' if is_running else 'Start Bot' }}
+          </button>
+        </form>
+      </div>
+
+      <div class="auto-post-setting">
+        <h4>Automatic Posting</h4>
+        <form method="POST" action="/update-settings" class="setting-form">
+          <label class="switch">
+            <input
+              type="checkbox"
+              name="auto_post"
+              {%
+              if
+              user.auto_post
+              %}checked{%
+              endif
+              %}
+            />
+            <span class="slider round"></span>
+          </label>
+          <span class="setting-description">
+            When enabled, the bot will automatically post threads to Bluesky.
+            When disabled, threads will be saved as drafts for your review.
+          </span>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="topics-section">
+    <h3>Topics of Interest</h3>
+    <form method="POST" action="/update-topics">
+      <div class="form-group">
+        <textarea
+          id="topics"
+          name="topics"
+          rows="3"
+          placeholder="Enter topics separated by commas (e.g., technology, business, science, health)"
+        >
+{{ user.topics|join(', ') }}</textarea
+        >
+        <small class="help-text"
+          >These topics will help us better process your newsletters</small
+        >
+      </div>
+      <button type="submit" class="button secondary">Update Topics</button>
+    </form>
+  </div>
+
+  <div class="tweet-form">
+    <h3>Post to Bluesky</h3>
+    <form method="POST" action="/post-tweet">
+      <div class="form-group">
+        <textarea
+          name="tweet_text"
+          rows="4"
+          maxlength="300"
+          placeholder="What's on your mind?"
+          required
+        ></textarea>
+        <div class="character-count"><span id="charCount">0</span>/300</div>
+      </div>
+      <button type="submit" class="button primary">Post</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  document
+    .querySelector('textarea[name="tweet_text"]')
+    .addEventListener("input", function () {
+      const charCount = this.value.length;
+      document.getElementById("charCount").textContent = charCount;
+    });
+
+  document
+    .querySelector('input[name="auto_post"]')
+    .addEventListener("change", async function () {
+      const response = await fetch("/update-settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          auto_post: this.checked,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Show success message
+          const alert = document.createElement("div");
+          alert.className = "alert alert-success";
+          alert.textContent = "Settings updated successfully";
+          document
+            .querySelector(".dashboard-container")
+            .insertBefore(alert, document.querySelector(".settings-card"));
+
+          // Remove alert after 3 seconds
+          setTimeout(() => alert.remove(), 3000);
+        }
+      }
+    });
+</script>
+
+<style>
+  .dashboard-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .bot-controls,
+  .topics-section,
+  .tweet-form {
+    margin: 20px 0;
+    padding: 20px;
+    background: #f5f5f5;
+    border-radius: 8px;
+  }
+
+  .form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+  }
+
+  .help-text {
+    display: block;
+    margin-top: 5px;
+    color: #666;
+    font-size: 0.9em;
+  }
+
+  .character-count {
+    text-align: right;
+    color: #666;
+    margin-top: 5px;
+  }
+
+  .alert {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+  }
+
+  .alert-success {
+    background: #d4edda;
+    color: #155724;
+  }
+
+  .alert-error {
+    background: #f8d7da;
+    color: #721c24;
+  }
+
+  .button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-top: 10px;
+  }
+
+  .button.primary {
+    background: #007bff;
+    color: white;
+  }
+
+  .button.secondary {
+    background: #6c757d;
+    color: white;
+  }
+
+  .button.danger {
+    background: #dc3545;
+    color: white;
+  }
+
+  .settings-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .bot-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .bot-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.9em;
+    font-weight: 500;
+  }
+
+  .status-running {
+    background: #d4edda;
+    color: #155724;
+  }
+
+  .status-stopped {
+    background: #f8d7da;
+    color: #721c24;
+  }
+
+  .auto-post-setting {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .setting-form {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .setting-description {
+    color: #666;
+    font-size: 0.9em;
+  }
+
+  /* Switch styling */
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: 0.4s;
+  }
+
+  input:checked + .slider {
+    background-color: #2196f3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .slider.round {
+    border-radius: 34px;
+  }
+
+  .slider.round:before {
+    border-radius: 50%;
+  }
+</style>
+{% endblock %}

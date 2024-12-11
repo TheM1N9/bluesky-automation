@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "bluesky-bot"
+version = "0.1.0"
+description = "A simple Bluesky bot that posts messages"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.13"
+atproto = "^0.0.44"
+python-dotenv = "^1.0.0"
+fastapi = "^0.115.6"
+uvicorn = "^0.32.1"
+motor = "^3.6.0"
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+python-multipart = "^0.0.19"
+email-validator = "^2.2.0"
+jinja2 = "^3.1.4"
+itsdangerous = "^2.2.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api" 

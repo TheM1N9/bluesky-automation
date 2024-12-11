@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="writing-style-container">
+    <h2>Personalize Your Bot's Writing Style</h2>
+    
+    <div class="progress-bar">
+        <div class="progress" style="width: {{ (samples|length / 10) * 100 }}%"></div>
+        <span>{{ samples|length }}/10 samples submitted</span>
+    </div>
+
+    {% if samples|length < 10 %}
+    <div class="sample-form">
+        <h3>Submit Writing Sample {{ samples|length + 1 }}</h3>
+        <form method="POST" action="/submit-writing-sample">
+            <div class="form-group">
+                <label>Sample Type:</label>
+                <select name="sample_type" required>
+                    <option value="ESSAY" {% if samples|selectattr("type", "equalto", "ESSAY")|list|length < 5 %}{% else %}disabled{% endif %}>
+                        Essay ({{ samples|selectattr("type", "equalto", "ESSAY")|list|length }}/5)
+                    </option>
+                    <option value="TWEET" {% if samples|selectattr("type", "equalto", "TWEET")|list|length < 5 %}{% else %}disabled{% endif %}>
+                        Tweet ({{ samples|selectattr("type", "equalto", "TWEET")|list|length }}/5)
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Content:</label>
+                <textarea name="content" required 
+                    placeholder="For essays: Write about a topic you're passionate about (min 300 words)
+For tweets: Write as you would normally tweet (max 300 characters)"
+                    rows="8"></textarea>
+            </div>
+
+            <button type="submit" class="button primary">Submit Sample</button>
+        </form>
+    </div>
+    {% else %}
+    <div class="style-analysis">
+        <h3>Your Writing Style Analysis</h3>
+        {% if writing_style %}
+        <div class="style-card">
+            <h4>Thinking Style</h4>
+            <p>{{ writing_style.thinking_style }}</p>
+            
+            <h4>Narrative Style</h4>
+            <p>{{ writing_style.narrative_style }}</p>
+            
+            <small>Last updated: {{ writing_style.last_updated.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+            
+            <form method="POST" action="/reanalyze-writing-style" class="reanalyze-form">
+                <button type="submit" class="button secondary">Reanalyze Writing Style</button>
+            </form>
+        </div>
+        {% else %}
+        <p>Analyzing your writing style... Please check back soon.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="samples-list">
+        <h3>Your Submitted Samples</h3>
+        {% for sample in samples %}
+        <div class="sample-card">
+            <div class="sample-type">{{ sample.type }}</div>
+            <div class="sample-content">{{ sample.content[:200] }}{% if sample.content|length > 200 %}...{% endif %}</div>
+            <div class="sample-date">{{ sample.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.writing-style-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.progress-bar {
+    background: #eee;
+    height: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+    position: relative;
+}
+
+.progress {
+    background: #4CAF50;
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+.progress-bar span {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+}
+
+.sample-form {
+    background: #f5f5f5;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.style-card {
+    background: #f5f5f5;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.sample-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px 0;
+}
+
+.sample-type {
+    font-weight: bold;
+    color: #666;
+}
+
+.sample-content {
+    margin: 10px 0;
+    white-space: pre-wrap;
+}
+
+.sample-date {
+    font-size: 0.8em;
+    color: #666;
+}
+
+.reanalyze-form {
+    margin-top: 20px;
+    text-align: right;
+}
+
+.button.secondary {
+    background: #666;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.button.secondary:hover {
+    background: #555;
+}
+</style>
+{% endblock %} 

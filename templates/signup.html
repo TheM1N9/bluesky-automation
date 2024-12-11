@@ -1,0 +1,75 @@
+{% extends "base.html" %} {% block title %}Sign Up{% endblock %} {% block
+content %}
+<div class="form-container">
+  <h2>Create Account</h2>
+
+  {% if messages %} {% for message in messages %}
+  <div class="alert alert-{{ message.type }}">{{ message.text }}</div>
+  {% endfor %} {% endif %}
+
+  <form
+    method="POST"
+    action="/signup"
+    enctype="application/x-www-form-urlencoded"
+  >
+    <div class="form-group">
+      <label for="email">Email:</label>
+      <input type="email" id="email" name="email" required />
+    </div>
+
+    <div class="form-group">
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" required />
+    </div>
+
+    <div class="form-group">
+      <label for="bluesky_handle">Bluesky Handle:</label>
+      <input type="text" id="bluesky_handle" name="bluesky_handle" required />
+    </div>
+
+    <div class="form-group">
+      <label for="bluesky_password">Bluesky Password:</label>
+      <input
+        type="password"
+        id="bluesky_password"
+        name="bluesky_password"
+        required
+      />
+    </div>
+
+    <div class="form-group">
+      <label for="topics">Topics of Interest:</label>
+      <textarea
+        id="topics"
+        name="topics"
+        rows="3"
+        placeholder="Enter topics separated by commas (e.g., technology, business, science, health)"
+      ></textarea>
+      <small class="help-text"
+        >These topics will help us better process your newsletters</small
+      >
+    </div>
+
+    <button type="submit" class="button primary">Sign Up</button>
+  </form>
+
+  <p class="form-footer">Already have an account? <a href="/login">Login</a></p>
+</div>
+
+<style>
+  .form-group textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+  }
+
+  .help-text {
+    display: block;
+    margin-top: 5px;
+    color: #666;
+    font-size: 0.9em;
+  }
+</style>
+{% endblock %}

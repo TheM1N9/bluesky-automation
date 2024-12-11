@@ -1,0 +1,16 @@
+{% extends "base.html" %} {% block title %}Home{% endblock %} {% block content
+%}
+<div class="container">
+  <h1>Welcome to Newsletter Bot</h1>
+  <p>Automate your newsletter sharing on Bluesky!</p>
+
+  <div class="cta-buttons">
+    {% if not user %}
+    <a href="/signup" class="button primary">Get Started</a>
+    <a href="/login" class="button secondary">Login</a>
+    {% else %}
+    <a href="/dashboard" class="button primary">Go to Dashboard</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

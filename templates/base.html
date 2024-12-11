@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{% block title %}{% endblock %} - Newsletter Bot</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}" />
+  </head>
+  <body>
+    <nav>
+      <div class="nav-container">
+        <a href="/" class="logo">Newsletter Bot</a>
+        <div class="nav-links">
+          {% if user %}
+          <a href="/dashboard">Dashboard</a>
+          <a href="/drafts">Drafts</a>
+          <a href="/writing-style">Writing Style</a>
+          <a href="/logout">Logout</a>
+          {% else %}
+          <a href="/login">Login</a>
+          <a href="/signup">Sign Up</a>
+          {% endif %}
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      {% if messages %} {% for message in messages %}
+      <div class="alert alert-{{ message.type }}">{{ message.text }}</div>
+      {% endfor %} {% endif %} {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>
