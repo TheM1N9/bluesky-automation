@@ -72,6 +72,33 @@
       }
     });
   });
+
+  document.querySelectorAll(".post-thread").forEach((button) => {
+    button.addEventListener("click", async function (e) {
+      e.preventDefault();
+      if (!confirm("Are you sure you want to post this thread to Bluesky?"))
+        return;
+
+      const draftCard = this.closest(".draft-card");
+      const draftId = draftCard.dataset.id;
+
+      try {
+        const response = await fetch(`/post-draft/${draftId}`, {
+          method: "POST",
+        });
+
+        if (response.ok) {
+          alert("Thread posted successfully!");
+          draftCard.remove(); // Remove the draft after posting
+        } else {
+          alert("Failed to post thread");
+        }
+      } catch (error) {
+        console.error("Error posting thread:", error);
+        alert("Error posting thread");
+      }
+    });
+  });
 </script>
 
 <style>

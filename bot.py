@@ -250,59 +250,6 @@ class BlueskyBot:
             self.logger.error(f"Error parsing date {date_str}: {e}")
             return False
 
-    # async def create_thread_from_email(self, email_data: Dict[str, Any]) -> List[str]:
-    #     """Create a thread of posts from email content"""
-    #     try:
-    #         chat = self.model.start_chat(history=[])
-    #         prompt = f"""
-    #         Create a thread from this newsletter content:
-
-    #         Subject: {email_data['subject']}
-    #         From: {email_data['sender']}
-    #         Content: {email_data['content'][:4000]}  # Increased content length
-
-    #         Requirements for the thread:
-    #         - Break down the content into 3-5 connected posts
-    #         - Each post must be under 300 characters
-    #         - First post should introduce the newsletter topic
-    #         - Include 1-2 relevant emojis per post
-    #         - Make it engaging and informative
-    #         - Maintain narrative flow between posts
-    #         - End with a concluding post
-    #         - Each post should be separated by [TWEET]
-
-    #         Format the thread naturally, not like a bot.
-    #         """
-
-    #         response = chat.send_message(prompt)
-    #         posts = response.text.split("[TWEET]")
-
-    #         # Clean and validate posts
-    #         valid_posts = []
-    #         for post in posts:
-    #             clean_post = post.strip()
-    #             if clean_post:
-    #                 # Remove any markdown or special characters
-    #                 clean_post = re.sub(r"\*\*|\[|\]|\(\)|\{\}|#", "", clean_post)
-    #                 if len(clean_post) <= 300:
-    #                     valid_posts.append(clean_post)
-    #                 else:
-    #                     # If post is too long, try to split it
-    #                     while clean_post and len(clean_post) > 300:
-    #                         split_index = clean_post.rfind(". ", 0, 297)
-    #                         if split_index == -1:
-    #                             split_index = 297
-    #                         valid_posts.append(clean_post[:split_index] + "...")
-    #                         clean_post = clean_post[split_index:].strip()
-    #                     if clean_post:
-    #                         valid_posts.append(clean_post)
-
-    #         return valid_posts
-
-    #     except Exception as e:
-    #         self.logger.error(f"Error creating thread: {e}")
-    #         return []
-
     async def post_thread_to_bluesky(self, posts: List[str]) -> bool:
         """Post a thread of messages to Bluesky"""
         try:
@@ -523,7 +470,11 @@ class BlueskyBot:
             prompt = f"""
             Create a engaging Twitter thread about: {topic}
 
-            Context from newsletter: {content}
+            Context for the thread: {content}
+
+            You are posting on behalf of human user. You are a human.
+            You will be given his thinking style and narrative style.
+            You should use this style to write the tweets.
 
             Use this thinking style:
             {thinking_style}

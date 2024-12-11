@@ -22,6 +22,8 @@ from database import db, Database
 from bot_manager import bot_manager
 from writing_analyzer import analyze_writing_style
 import json
+from web_search import research_topic
+from bot import BlueskyBot
 
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")
 app = FastAPI()
@@ -373,26 +375,35 @@ async def delete_draft(draft_id: str):
 
 
 @app.post("/post-draft/{draft_id}")
-async def post_draft(request: Request, draft_id: str):
-    user = await get_current_user_from_session(request)
-    if not user:
-        return RedirectResponse(url="/login")
+async def post_draft(draft_id: str, request: Request):
+    try:
+        user = await get_current_user_from_session(request)
+        if not user:
+            raise HTTPException(status_code=401, detail="Not authenticated")
 
-    draft = await db.get_draft(draft_id)
-    if not draft:
-        raise HTTPException(status_code=404, detail="Draft not found")
+        # Get draft content
+        draft = await db.get_draft(draft_id)
+        if not draft:
+            raise HTTPException(status_code=404, detail="Draft not found")
 
-    if draft["user_email"] != user["email"]:
-        raise HTTPException(status_code=403)
+        # Get the bot instance for this user
+        if user["email"] not in bot_manager.bots:
+            raise HTTPException(status_code=400, detail="Bot not running")
 
-    bot = bot_manager.bots.get(user["email"])
-    if bot:
+        bot = bot_manager.bots[user["email"]]
+
+        # Post the thread
         success = await bot.post_thread_to_bluesky(draft["tweets"])
-        if success:
-            await db.delete_draft(draft_id)
-            return {"status": "success"}
 
-    return {"status": "error"}
+        if success:
+            # Delete the draft after successful posting
+            await db.delete_draft(draft_id)
+            return {"success": True}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to post thread")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/update-settings")
@@ -483,3 +494,63 @@ async def reanalyze_writing_style(request: Request):
         )
 
     return RedirectResponse(url="/writing-style", status_code=303)
+
+
+@app.post("/generate-thread")
+async def generate_thread(request: Request, topic: str = Form(...)):
+    user = await get_current_user_from_session(request)
+    if not user:
+        return RedirectResponse(url="/login")
+
+    try:
+        # Research the topic
+        research_content = await research_topic(topic)
+
+        # Get user's bot instance or create temporary one
+        if user["email"] in bot_manager.bots:
+            bot = bot_manager.bots[user["email"]]
+        else:
+            bot = BlueskyBot(
+                handle=user["bluesky_handle"],
+                password=user["bluesky_password"],
+                user_email=user["email"],
+            )
+
+        # Generate thread using the research content
+        tweets = await bot.create_topic_thread(topic, research_content)
+
+        if tweets:
+            # Save as draft
+            draft_id = await db.save_draft_thread(
+                user_email=user["email"], topic=topic, tweets=tweets
+            )
+
+            return RedirectResponse(
+                url="/drafts",
+                status_code=303,
+                headers={
+                    "messages": json.dumps(
+                        [
+                            {
+                                "type": "success",
+                                "text": "Thread generated successfully! Check your drafts.",
+                            }
+                        ]
+                    )
+                },
+            )
+        else:
+            raise HTTPException(status_code=500, detail="Failed to generate thread")
+
+    except Exception as e:
+        return templates.TemplateResponse(
+            "dashboard.html",
+            {
+                "request": request,
+                "user": user,
+                "is_running": user["email"] in bot_manager.bots,
+                "messages": [
+                    {"type": "error", "text": f"Error generating thread: {str(e)}"}
+                ],
+            },
+        )
