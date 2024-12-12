@@ -57,3 +57,7 @@ venv/
 .python-version
 
 *.log
+
+aws_gmail_tokens.txt
+token.pickle
+credentials.json
