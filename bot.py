@@ -74,26 +74,19 @@ class BlueskyBot:
     def authenticate_gmail(self):
         """Authenticate with Gmail API using OAuth 2.0"""
         try:
-            creds = None
-            # Check if token.pickle exists with stored credentials
-            if os.path.exists("token.pickle"):
-                with open("token.pickle", "rb") as token:
-                    creds = pickle.load(token)
+            from google.oauth2.credentials import Credentials
 
-            # If credentials are invalid or don't exist, authenticate
-            if not creds or not creds.valid:
-                if creds and creds.expired and creds.refresh_token:
-                    creds.refresh(Request())
-                else:
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        "credentials.json", self.GMAIL_SCOPES
-                    )
-                    creds = flow.run_local_server(port=0)
+            # Get credentials directly from environment variables
+            creds = Credentials(
+                token=os.getenv("GMAIL_TOKEN"),
+                refresh_token=os.getenv("GMAIL_REFRESH_TOKEN"),
+                token_uri="https://oauth2.googleapis.com/token",
+                client_id=os.getenv("GMAIL_CLIENT_ID"),
+                client_secret=os.getenv("GMAIL_CLIENT_SECRET"),
+                scopes=self.GMAIL_SCOPES,
+            )
 
-                # Save credentials for future use
-                with open("token.pickle", "wb") as token:
-                    pickle.dump(creds, token)
-
+            # Build the Gmail service directly with these credentials
             self.gmail_service = build("gmail", "v1", credentials=creds)
             self.logger.info("Successfully authenticated with Gmail")
 
