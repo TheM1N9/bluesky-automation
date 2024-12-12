@@ -17,7 +17,7 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional, List
 import os
-from models import UserCreate, UserLogin, User
+from models import UserCreate, UserLogin, User, UserOnboarding
 from database import db, Database
 from bot_manager import bot_manager
 from writing_analyzer import analyze_writing_style
@@ -166,10 +166,12 @@ async def get_bot_status(request: Request):
 
 
 # Helper function to get current user from session
-async def get_current_user_from_session(request: Request):
-    if "user_email" not in request.session or request.session["user_email"] is None:
-        return None
-    return await db.get_user(request.session["user_email"])
+async def get_current_user_from_session(request: Request) -> Optional[dict]:
+    user_email = request.session.get("user_email")
+    if user_email:
+        user = await db.get_user(user_email)
+        return user
+    return None
 
 
 @app.get("/")
@@ -207,49 +209,53 @@ async def signup_page(request: Request):
 
 
 @app.post("/signup")
-async def signup_post(
+async def signup(request: Request, user_data: UserCreate):
+    # Check if user exists
+    existing_user = await db.get_user(user_data.email)
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    # Create user with basic info
+    user = await db.create_user(user_data)
+
+    # Create session immediately after signup
+    request.session["user_email"] = user_data.email
+
+    # Create access token as backup
+    access_token = create_access_token(data={"sub": user_data.email})
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "redirect": "/onboarding",
+    }
+
+
+@app.post("/complete-onboarding")
+async def complete_onboarding(
     request: Request,
-    email: str = Form(...),
-    password: str = Form(...),
-    bluesky_handle: str = Form(...),
-    bluesky_password: str = Form(...),
-    topics: str = Form(...),
+    onboarding_data: UserOnboarding,
+    current_user: dict = Depends(get_current_user_from_session),
 ):
-    try:
-        # Check if user already exists
-        existing_user = await db.get_user(email)
-        if existing_user:
-            return templates.TemplateResponse(
-                "signup.html",
-                {
-                    "request": request,
-                    "messages": [{"type": "error", "text": "Email already registered"}],
-                },
-            )
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
 
-        # Process topics
-        topic_list = [topic.strip() for topic in topics.split(",") if topic.strip()]
+    # Complete onboarding
+    await db.complete_onboarding(current_user["email"], onboarding_data)
 
-        # Create user document
-        user = {
-            "email": email,
-            "password": Database.pwd_context.hash(password),
-            "bluesky_handle": bluesky_handle,
-            "bluesky_password": bluesky_password,
-            "topics": topic_list,
-            "is_active": True,
-            "created_at": datetime.utcnow(),
-        }
+    # Ensure session is set
+    request.session["user_email"] = current_user["email"]
 
-        # Insert into MongoDB
-        await db.client.newsletter_bot.users.insert_one(user)
+    return {"success": True, "redirect": "/dashboard"}
 
-        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-    except Exception as e:
-        return templates.TemplateResponse(
-            "signup.html",
-            {"request": request, "messages": [{"type": "error", "text": str(e)}]},
-        )
+
+@app.get("/onboarding")
+async def onboarding_page(
+    request: Request, current_user: dict = Depends(get_current_user_from_session)
+):
+    if not current_user:
+        return RedirectResponse(url="/login")
+    return templates.TemplateResponse("onboarding.html", {"request": request})
 
 
 @app.get("/dashboard")
@@ -257,6 +263,10 @@ async def dashboard(request: Request):
     user = await get_current_user_from_session(request)
     if not user:
         return RedirectResponse(url="/login")
+
+    # Check if onboarding is completed
+    if not user.get("onboarding_completed", False):
+        return RedirectResponse(url="/onboarding")
 
     is_running = user["email"] in bot_manager.bots
     return templates.TemplateResponse(
@@ -554,3 +564,55 @@ async def generate_thread(request: Request, topic: str = Form(...)):
                 ],
             },
         )
+
+
+@app.get("/settings")
+async def settings_page(request: Request):
+    user = await get_current_user_from_session(request)
+    if not user:
+        return RedirectResponse(url="/login")
+    return templates.TemplateResponse(
+        "settings.html", {"request": request, "user": user}
+    )
+
+
+@app.post("/update-bluesky-credentials")
+async def update_bluesky_credentials(
+    request: Request,
+    credentials: dict,
+    current_user: dict = Depends(get_current_user_from_session),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    await db.update_bluesky_credentials(
+        current_user["email"],
+        credentials["bluesky_handle"],
+        credentials["bluesky_password"],
+    )
+    return {"message": "Credentials updated successfully"}
+
+
+@app.post("/update-password")
+async def update_password(
+    request: Request,
+    password_data: dict,
+    current_user: dict = Depends(get_current_user_from_session),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    await db.update_password(current_user["email"], password_data["password"])
+    return {"message": "Password updated successfully"}
+
+
+@app.post("/delete-account")
+async def delete_account(
+    request: Request, current_user: dict = Depends(get_current_user_from_session)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    await db.delete_user(current_user["email"])
+    request.session.clear()
+    return {"message": "Account deleted successfully"}

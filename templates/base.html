@@ -3,20 +3,153 @@
   <head>
     <title>{% block title %}{% endblock %} - Newsletter Bot</title>
     <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', path='gateway.css') }}" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="{{ url_for('static', path='favicon.png') }}"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        line-height: 1.6;
+        color: #1a1a1a;
+        background: #f8f9fa;
+        margin: 0;
+      }
+
+      nav {
+        background: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        padding: 0.75rem 0;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+      }
+
+      .nav-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .logo {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #2563eb;
+        text-decoration: none;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+      }
+
+      .nav-link {
+        color: #4b5563;
+        text-decoration: none;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        transition: all 0.2s ease;
+      }
+
+      .nav-link:hover {
+        color: #2563eb;
+        background-color: #f3f4f6;
+      }
+
+      .nav-link.active {
+        color: #2563eb;
+        background-color: #eff6ff;
+      }
+
+      .nav-link.logout {
+        margin-left: 0.5rem;
+      }
+
+      .nav-link.logout:hover {
+        color: #dc2626;
+        background-color: #fee2e2;
+      }
+
+      main {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 2rem;
+      }
+
+      .alert {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+      }
+
+      .alert-success {
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #86efac;
+      }
+
+      .alert-error {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fca5a5;
+      }
+    </style>
   </head>
   <body>
     <nav>
       <div class="nav-container">
-        <a href="/" class="logo">Newsletter Bot</a>
+        <a href="/" class="logo">Alma AI</a>
         <div class="nav-links">
           {% if user %}
-          <a href="/dashboard">Dashboard</a>
-          <a href="/drafts">Drafts</a>
-          <a href="/writing-style">Writing Style</a>
-          <a href="/logout">Logout</a>
+          <a
+            href="/dashboard"
+            class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}"
+          >
+            Dashboard
+          </a>
+          <a
+            href="/drafts"
+            class="nav-link {% if request.url.path == '/drafts' %}active{% endif %}"
+          >
+            Drafts
+          </a>
+          <a
+            href="/writing-style"
+            class="nav-link {% if request.url.path == '/writing-style' %}active{% endif %}"
+          >
+            Writing Style
+          </a>
+          <a
+            href="/settings"
+            class="nav-link {% if request.url.path == '/settings' %}active{% endif %}"
+          >
+            Settings
+          </a>
+          <a href="/logout" class="nav-link logout">Logout</a>
           {% else %}
-          <a href="/login">Login</a>
-          <a href="/signup">Sign Up</a>
+          <a
+            href="/login"
+            class="nav-link {% if request.url.path == '/login' %}active{% endif %}"
+          >
+            Login
+          </a>
+          <a
+            href="/signup"
+            class="nav-link {% if request.url.path == '/signup' %}active{% endif %}"
+          >
+            Sign Up
+          </a>
           {% endif %}
         </div>
       </div>

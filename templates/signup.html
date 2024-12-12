@@ -1,75 +1,126 @@
-{% extends "base.html" %} {% block title %}Sign Up{% endblock %} {% block
-content %}
-<div class="form-container">
-  <h2>Create Account</h2>
-
-  {% if messages %} {% for message in messages %}
-  <div class="alert alert-{{ message.type }}">{{ message.text }}</div>
-  {% endfor %} {% endif %}
-
-  <form
-    method="POST"
-    action="/signup"
-    enctype="application/x-www-form-urlencoded"
-  >
-    <div class="form-group">
-      <label for="email">Email:</label>
-      <input type="email" id="email" name="email" required />
+{% extends "base.html" %} {% block content %}
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <h2>Create Account</h2>
+      <p>Sign up to get started with Alma AI</p>
     </div>
 
-    <div class="form-group">
-      <label for="password">Password:</label>
-      <input type="password" id="password" name="password" required />
+    <form id="signupForm" class="auth-form">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          required
+          placeholder="Enter your email"
+          autocomplete="email"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          required
+          placeholder="Create a password"
+          autocomplete="new-password"
+        />
+        <span class="password-hint">Must be at least 8 characters</span>
+      </div>
+
+      <div class="form-group">
+        <label for="confirm_password">Confirm Password</label>
+        <input
+          type="password"
+          id="confirm_password"
+          name="confirm_password"
+          required
+          placeholder="Confirm your password"
+          autocomplete="new-password"
+        />
+      </div>
+
+      <button type="submit" class="button primary">Create Account</button>
+    </form>
+
+    <div class="auth-footer">
+      <p>Already have an account? <a href="/login">Sign in</a></p>
     </div>
-
-    <div class="form-group">
-      <label for="bluesky_handle">Bluesky Handle:</label>
-      <input type="text" id="bluesky_handle" name="bluesky_handle" required />
-    </div>
-
-    <div class="form-group">
-      <label for="bluesky_password">Bluesky Password:</label>
-      <input
-        type="password"
-        id="bluesky_password"
-        name="bluesky_password"
-        required
-      />
-    </div>
-
-    <div class="form-group">
-      <label for="topics">Topics of Interest:</label>
-      <textarea
-        id="topics"
-        name="topics"
-        rows="3"
-        placeholder="Enter topics separated by commas (e.g., technology, business, science, health)"
-      ></textarea>
-      <small class="help-text"
-        >These topics will help us better process your newsletters</small
-      >
-    </div>
-
-    <button type="submit" class="button primary">Sign Up</button>
-  </form>
-
-  <p class="form-footer">Already have an account? <a href="/login">Login</a></p>
+  </div>
 </div>
 
 <style>
-  .form-group textarea {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    resize: vertical;
+  /* Password match validation styling */
+  #confirm_password:valid:not(:placeholder-shown) {
+    border-color: #10b981;
   }
 
-  .help-text {
-    display: block;
-    margin-top: 5px;
-    color: #666;
-    font-size: 0.9em;
+  #confirm_password:invalid:not(:placeholder-shown) {
+    border-color: #dc2626;
+  }
+
+  .topics-hint {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
   }
 </style>
+
+<script>
+  const form = document.getElementById("signupForm");
+  const password = document.getElementById("password");
+  const confirmPassword = document.getElementById("confirm_password");
+
+  // Password match validation
+  function validatePassword() {
+    if (password.value !== confirmPassword.value) {
+      confirmPassword.setCustomValidity("Passwords don't match");
+    } else {
+      confirmPassword.setCustomValidity("");
+    }
+  }
+
+  password.addEventListener("change", validatePassword);
+  confirmPassword.addEventListener("keyup", validatePassword);
+
+  // Handle form submission
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    // Create JSON payload
+    const formData = {
+      email: document.getElementById("email").value,
+      password: document.getElementById("password").value,
+    };
+
+    try {
+      const response = await fetch("/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+        credentials: "same-origin",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Redirect to onboarding
+        if (data.redirect) {
+          window.location.href = data.redirect;
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Signup failed");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert(error.message);
+    }
+  });
+</script>
 {% endblock %}

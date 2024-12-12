@@ -265,10 +265,15 @@ class BlueskyBot:
                         previous_post = response
                         self.logger.info(f"✅ Posted thread starter: {post[:50]}...")
                     else:
+                        if root_post is None or previous_post is None:
+                            self.logger.error(
+                                "Root or previous post not found, skipping reply"
+                            )
+                            continue
                         # Reply to previous post with proper parent and root references
                         response = self.client.send_post(
                             text=post,
-                            reply_to={
+                            reply_to={  # type: ignore
                                 "root": {"uri": root_post.uri, "cid": root_post.cid},
                                 "parent": {
                                     "uri": previous_post.uri,

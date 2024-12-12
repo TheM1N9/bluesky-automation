@@ -4,22 +4,368 @@
 
   {% for draft in drafts %}
   <div class="draft-card" data-id="{{ draft._id }}">
-    <h3>{{ draft.topic }}</h3>
+    <div class="draft-header">
+      <h3>{{ draft.topic }}</h3>
+    </div>
+
     <div class="tweets-container">
       {% for tweet in draft.tweets %}
-      <textarea class="tweet-edit">{{ tweet }}</textarea>
+      <div class="tweet-wrapper">
+        <textarea class="tweet-edit" rows="4" maxlength="300">
+{{ tweet }}</textarea
+        >
+        <div class="character-count" aria-live="polite"><span>0</span>/300</div>
+      </div>
       {% endfor %}
     </div>
+
     <div class="draft-actions">
       <button class="button primary post-thread">Post Thread</button>
       <button class="button secondary save-edits">Save Edits</button>
       <button class="button danger delete-draft">Delete</button>
     </div>
   </div>
-  {% endfor %}
+  {% endfor %} {% if not drafts %}
+  <div class="empty-state">
+    <p>No draft threads yet. Generate a thread to get started!</p>
+  </div>
+  {% endif %}
 </div>
 
+<div id="toast" class="toast">
+  <div class="toast-content">
+    <span class="toast-message"></span>
+    <button class="toast-close">&times;</button>
+  </div>
+</div>
+
+<style>
+  .drafts-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .drafts-container h2 {
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 2rem;
+    color: #1a1a1a;
+  }
+
+  .draft-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    transition: transform 0.2s ease;
+  }
+
+  .draft-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .draft-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .draft-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0;
+  }
+
+  .tweets-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .tweet-wrapper {
+    position: relative;
+  }
+
+  .tweet-edit {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    resize: vertical;
+    transition: all 0.2s ease;
+    min-height: 100px;
+  }
+
+  .tweet-edit:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+
+  /* Character count states */
+  .tweet-wrapper.within-limit .tweet-edit {
+    border-color: #2563eb;
+  }
+
+  .tweet-wrapper.near-limit .tweet-edit {
+    border-color: #f59e0b;
+  }
+
+  .tweet-wrapper.over-limit .tweet-edit {
+    border-color: #dc2626;
+  }
+
+  .character-count {
+    position: absolute;
+    bottom: 0.75rem;
+    right: 0.75rem;
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    background: rgba(255, 255, 255, 0.9);
+    transition: all 0.2s ease;
+  }
+
+  .within-limit .character-count {
+    color: #2563eb;
+  }
+
+  .near-limit .character-count {
+    color: #f59e0b;
+  }
+
+  .over-limit .character-count {
+    color: #dc2626;
+  }
+
+  .draft-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .button {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .button.primary {
+    background: #2563eb;
+    color: white;
+  }
+
+  .button.primary:hover {
+    background: #1d4ed8;
+  }
+
+  .button.secondary {
+    background: #4b5563;
+    color: white;
+  }
+
+  .button.secondary:hover {
+    background: #374151;
+  }
+
+  .button.danger {
+    background: #dc2626;
+    color: white;
+  }
+
+  .button.danger:hover {
+    background: #b91c1c;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .empty-state p {
+    color: #6b7280;
+    font-size: 1rem;
+  }
+
+  @media (max-width: 640px) {
+    .draft-actions {
+      flex-direction: column;
+    }
+
+    .button {
+      width: 100%;
+    }
+  }
+
+  /* Toast Styles */
+  .toast {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1000;
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-1rem);
+    transition: all 0.3s ease;
+  }
+
+  .toast.show {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .toast-content {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    background: white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    min-width: 300px;
+  }
+
+  .toast.success .toast-content {
+    background: #10b981;
+    color: white;
+  }
+
+  .toast.error .toast-content {
+    background: #ef4444;
+    color: white;
+  }
+
+  .toast.warning .toast-content {
+    background: #f59e0b;
+    color: white;
+  }
+
+  .toast-message {
+    flex: 1;
+    margin-right: 1rem;
+    font-size: 0.875rem;
+  }
+
+  .toast-close {
+    background: none;
+    border: none;
+    color: currentColor;
+    cursor: pointer;
+    font-size: 1.25rem;
+    padding: 0;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+
+  .toast-close:hover {
+    opacity: 1;
+  }
+
+  /* Add loading state for buttons */
+  .button.loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+  }
+
+  .button.loading::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 1.25em;
+    height: 1.25em;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-top-color: white;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: button-loading-spinner 0.6s linear infinite;
+  }
+
+  @keyframes button-loading-spinner {
+    from {
+      transform: translate(-50%, -50%) rotate(0turn);
+    }
+    to {
+      transform: translate(-50%, -50%) rotate(1turn);
+    }
+  }
+</style>
+
 <script>
+  document.querySelectorAll(".tweet-edit").forEach((textarea) => {
+    const wrapper = textarea.closest(".tweet-wrapper");
+    const counter = wrapper.querySelector(".character-count span");
+
+    function updateCharacterCount() {
+      const length = textarea.value.length;
+      counter.textContent = length;
+
+      // Remove all state classes first
+      wrapper.classList.remove("within-limit", "near-limit", "over-limit");
+
+      // Add appropriate state class
+      if (length > 300) {
+        wrapper.classList.add("over-limit");
+      } else if (length > 280) {
+        wrapper.classList.add("near-limit");
+      } else if (length > 0) {
+        wrapper.classList.add("within-limit");
+      }
+    }
+
+    // Initial count
+    updateCharacterCount();
+
+    // Update on input
+    textarea.addEventListener("input", updateCharacterCount);
+  });
+</script>
+
+<script>
+  // Toast notification system
+  class Toast {
+    constructor() {
+      this.toast = document.getElementById("toast");
+      this.message = this.toast.querySelector(".toast-message");
+      this.closeBtn = this.toast.querySelector(".toast-close");
+      this.timeout = null;
+
+      this.closeBtn.addEventListener("click", () => this.hide());
+    }
+
+    show(message, type = "success", duration = 3000) {
+      if (this.timeout) {
+        clearTimeout(this.timeout);
+      }
+      this.toast.classList.remove("success", "error", "warning");
+      this.message.textContent = message;
+      this.toast.classList.add(type, "show");
+      this.timeout = setTimeout(() => this.hide(), duration);
+    }
+
+    hide() {
+      this.toast.classList.remove("show");
+      setTimeout(() => {
+        this.toast.classList.remove("success", "error", "warning");
+      }, 300);
+    }
+  }
+
+  const toast = new Toast();
+
+  // Save edits functionality
   document.querySelectorAll(".save-edits").forEach((button) => {
     button.addEventListener("click", async function (e) {
       e.preventDefault();
@@ -29,25 +375,33 @@
         (textarea) => textarea.value
       );
 
+      // Add loading state
+      this.classList.add("loading");
+
       try {
         const response = await fetch(`/update-draft/${draftId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ tweets }),
+          credentials: "same-origin",
         });
 
         if (response.ok) {
-          alert("Draft updated successfully!");
+          toast.show("Draft saved successfully!", "success");
         } else {
-          alert("Failed to update draft");
+          const error = await response.json();
+          throw new Error(error.detail || "Failed to save draft");
         }
       } catch (error) {
         console.error("Error updating draft:", error);
-        alert("Error updating draft");
+        toast.show(error.message, "error");
+      } finally {
+        this.classList.remove("loading");
       }
     });
   });
 
+  // Delete draft functionality
   document.querySelectorAll(".delete-draft").forEach((button) => {
     button.addEventListener("click", async function (e) {
       e.preventDefault();
@@ -56,23 +410,30 @@
       const draftCard = this.closest(".draft-card");
       const draftId = draftCard.dataset.id;
 
+      this.classList.add("loading");
+
       try {
         const response = await fetch(`/delete-draft/${draftId}`, {
           method: "POST",
+          credentials: "same-origin",
         });
 
         if (response.ok) {
+          toast.show("Draft deleted successfully", "success");
           draftCard.remove();
         } else {
-          alert("Failed to delete draft");
+          const error = await response.json();
+          throw new Error(error.detail || "Failed to delete draft");
         }
       } catch (error) {
         console.error("Error deleting draft:", error);
-        alert("Error deleting draft");
+        toast.show(error.message, "error");
+        this.classList.remove("loading");
       }
     });
   });
 
+  // Post thread functionality
   document.querySelectorAll(".post-thread").forEach((button) => {
     button.addEventListener("click", async function (e) {
       e.preventDefault();
@@ -82,52 +443,28 @@
       const draftCard = this.closest(".draft-card");
       const draftId = draftCard.dataset.id;
 
+      this.classList.add("loading");
+
       try {
         const response = await fetch(`/post-draft/${draftId}`, {
           method: "POST",
+          credentials: "same-origin",
         });
 
         if (response.ok) {
-          alert("Thread posted successfully!");
-          draftCard.remove(); // Remove the draft after posting
+          toast.show("Thread posted successfully!", "success");
+          draftCard.remove();
         } else {
-          alert("Failed to post thread");
+          const error = await response.json();
+          throw new Error(error.detail || "Failed to post thread");
         }
       } catch (error) {
         console.error("Error posting thread:", error);
-        alert("Error posting thread");
+        toast.show(error.message, "error");
+      } finally {
+        this.classList.remove("loading");
       }
     });
   });
 </script>
-
-<style>
-  .drafts-container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-  }
-
-  .draft-card {
-    background: #f5f5f5;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-  }
-
-  .tweet-edit {
-    width: 100%;
-    margin: 10px 0;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    resize: vertical;
-  }
-
-  .draft-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
-  }
-</style>
 {% endblock %}

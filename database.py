@@ -3,8 +3,9 @@ from datetime import datetime, timedelta
 from passlib.context import CryptContext
 import os
 from dotenv import load_dotenv
-from typing import List
+from typing import List, Optional
 from bson import ObjectId
+from models import UserCreate, UserOnboarding
 
 load_dotenv()
 
@@ -12,7 +13,7 @@ MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
 
 
 class Database:
-    client: AsyncIOMotorClient = None
+    client: AsyncIOMotorClient
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     async def connect_db(self):
@@ -20,16 +21,18 @@ class Database:
 
     async def close_db(self):
         if self.client:
-            self.client.close()  # Remove await as it's not an async method
+            self.client.close()
 
-    async def create_user(self, user_data):
+    async def create_user(self, user_data: UserCreate):
+        """Create a new user with basic info"""
         user = {
             "email": user_data.email,
             "password": self.pwd_context.hash(user_data.password),
-            "bluesky_handle": user_data.bluesky_handle,
-            "bluesky_password": user_data.bluesky_password,  # Consider encrypting this
             "is_active": True,
             "created_at": datetime.utcnow(),
+            "onboarding_completed": False,
+            "topics": [],
+            "auto_post": False,
         }
         await self.client.newsletter_bot.users.insert_one(user)
         return user
@@ -129,6 +132,41 @@ class Database:
         await self.client.newsletter_bot.users.update_one(
             {"email": user_email}, {"$set": {"writing_style": style}}
         )
+
+    async def complete_onboarding(self, email: str, onboarding_data: UserOnboarding):
+        """Complete user onboarding"""
+        await self.client.newsletter_bot.users.update_one(
+            {"email": email},
+            {
+                "$set": {
+                    "bluesky_handle": onboarding_data.bluesky_handle,
+                    "bluesky_password": onboarding_data.bluesky_password,
+                    "topics": onboarding_data.topics,
+                    "onboarding_completed": True,
+                }
+            },
+        )
+        return True
+
+    async def update_bluesky_credentials(
+        self, email: str, handle: str, password: Optional[str] = None
+    ):
+        update_data = {"bluesky_handle": handle}
+        if password:
+            update_data["bluesky_password"] = password
+
+        await self.client.newsletter_bot.users.update_one(
+            {"email": email}, {"$set": update_data}
+        )
+
+    async def update_password(self, email: str, new_password: str):
+        hashed_password = self.pwd_context.hash(new_password)
+        await self.client.newsletter_bot.users.update_one(
+            {"email": email}, {"$set": {"password": hashed_password}}
+        )
+
+    async def delete_user(self, email: str):
+        await self.client.newsletter_bot.users.delete_one({"email": email})
 
 
 db = Database()

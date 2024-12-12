@@ -1,0 +1,109 @@
+{% extends "base.html" %} {% block content %}
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <h2>Complete Your Profile</h2>
+      <p>Set up your Newsletter preferences</p>
+    </div>
+
+    <form method="POST" action="/complete-onboarding" class="auth-form">
+      <div class="form-group">
+        <label for="bluesky_handle">Bluesky Handle</label>
+        <input
+          type="text"
+          id="bluesky_handle"
+          name="bluesky_handle"
+          required
+          placeholder="Your Bluesky handle"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="bluesky_password">Bluesky Password</label>
+        <input
+          type="password"
+          id="bluesky_password"
+          name="bluesky_password"
+          required
+          placeholder="Your Bluesky password"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="topics">Topics of Interest</label>
+        <input
+          type="text"
+          id="topics"
+          name="topics"
+          required
+          placeholder="Enter topics separated by commas (e.g., tech, health, science)"
+        />
+        <span class="topics-hint"
+          >These topics help us process your newsletters</span
+        >
+      </div>
+
+      <button type="submit" class="button primary">Complete Setup</button>
+    </form>
+  </div>
+</div>
+
+<style>
+  .topics-hint {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+  }
+</style>
+
+<script>
+  const form = document.querySelector(".auth-form");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const formData = {
+      bluesky_handle: document.getElementById("bluesky_handle").value,
+      bluesky_password: document.getElementById("bluesky_password").value,
+      topics: document
+        .getElementById("topics")
+        .value.split(",")
+        .map((t) => t.trim())
+        .filter((t) => t),
+    };
+
+    try {
+      const response = await fetch("/complete-onboarding", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+        // Add credentials to include cookies
+        credentials: "same-origin",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          window.location.href = data.redirect;
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to complete onboarding");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      // Show error toast
+      const toast = document.getElementById("toast");
+      const toastMessage = toast.querySelector(".toast-message");
+      toastMessage.textContent = error.message;
+      toast.classList.add("show", "error");
+
+      setTimeout(() => {
+        toast.classList.remove("show", "error");
+      }, 3000);
+    }
+  });
+</script>
+{% endblock %}

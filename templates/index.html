@@ -1,16 +1,188 @@
 {% extends "base.html" %} {% block title %}Home{% endblock %} {% block content
 %}
-<div class="container">
-  <h1>Welcome to Newsletter Bot</h1>
-  <p>Automate your newsletter sharing on Bluesky!</p>
+<div class="landing-container">
+  <section class="hero">
+    <h1>Welcome to Alma AI</h1>
+    <p class="tagline">Your Personal AI-Powered Bluesky Assistant</p>
+  </section>
 
-  <div class="cta-buttons">
+  <section class="features">
+    <h2>What We Offer</h2>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h3>Newsletter to Threads</h3>
+        <p>
+          Automatically convert your favorite newsletters into engaging Bluesky
+          threads, maintaining your unique voice and style.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <h3>Smart Topic Research</h3>
+        <p>
+          Enter any topic and get AI-generated threads based on comprehensive
+          web research, perfect for sharing insights with your followers.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <h3>Personalized Writing Style</h3>
+        <p>
+          Train the AI to match your writing style through essay and tweet
+          samples, ensuring all content feels authentically you.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <h3>Interactive Mentions</h3>
+        <p>
+          Automatically respond to mentions from your followers using your
+          personal writing style, maintaining engaging conversations.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <h3>Draft Management</h3>
+        <p>
+          Review, edit, and perfect your AI-generated threads before posting.
+          Full control over your content.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <h3>Auto-Posting</h3>
+        <p>
+          Optional automatic posting of approved content, keeping your feed
+          active while maintaining quality control.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
     {% if not user %}
-    <a href="/signup" class="button primary">Get Started</a>
-    <a href="/login" class="button secondary">Login</a>
+    <h2>Get Started Today</h2>
+    <p>
+      Join now to experience AI-powered social media management that maintains
+      your authentic voice.
+    </p>
+    <div class="cta-buttons">
+      <a href="/signup" class="button primary">Sign Up</a>
+      <a href="/login" class="button secondary">Login</a>
+    </div>
     {% else %}
+    <h2>Welcome Back!</h2>
+    <p>Continue managing your Bluesky presence with AI assistance.</p>
     <a href="/dashboard" class="button primary">Go to Dashboard</a>
     {% endif %}
-  </div>
+  </section>
 </div>
+
+<style>
+  .landing-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .hero {
+    text-align: center;
+    padding: 4rem 0;
+    background: linear-gradient(to right, #2563eb11, #2563eb22);
+    border-radius: 1rem;
+    margin-bottom: 3rem;
+  }
+
+  .hero h1 {
+    font-size: 3rem;
+    color: #1a1a1a;
+    margin-bottom: 1rem;
+  }
+
+  .tagline {
+    font-size: 1.5rem;
+    color: #4b5563;
+  }
+
+  .features {
+    margin: 4rem 0;
+  }
+
+  .features h2 {
+    text-align: center;
+    margin-bottom: 2rem;
+    font-size: 2rem;
+    color: #1a1a1a;
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin: 2rem 0;
+  }
+
+  .feature-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .feature-card h3 {
+    color: #2563eb;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+  }
+
+  .feature-card p {
+    color: #4b5563;
+    line-height: 1.6;
+  }
+
+  .cta {
+    text-align: center;
+    padding: 4rem 0;
+    background: white;
+    border-radius: 1rem;
+    margin-top: 3rem;
+  }
+
+  .cta h2 {
+    margin-bottom: 1rem;
+    font-size: 2rem;
+  }
+
+  .cta p {
+    color: #4b5563;
+    margin-bottom: 2rem;
+  }
+
+  .cta-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+  }
+
+  @media (max-width: 768px) {
+    .hero h1 {
+      font-size: 2rem;
+    }
+
+    .tagline {
+      font-size: 1.25rem;
+    }
+
+    .feature-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
 {% endblock %}

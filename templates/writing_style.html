@@ -3,22 +3,24 @@
 <div class="writing-style-container">
     <h2>Personalize Your Bot's Writing Style</h2>
     
-    <div class="progress-bar">
-        <div class="progress" style="width: {{ (samples|length / 10) * 100 }}%"></div>
-        <span>{{ samples|length }}/10 samples submitted</span>
+    <div class="progress-container">
+        <div class="progress-bar">
+            <div class="progress" style="width: {{ (samples|length / 10) * 100 }}%"></div>
+        </div>
+        <span class="progress-text">{{ samples|length }}/10 samples submitted</span>
     </div>
 
     {% if samples|length < 10 %}
-    <div class="sample-form">
+    <div class="sample-form-card">
         <h3>Submit Writing Sample {{ samples|length + 1 }}</h3>
         <form method="POST" action="/submit-writing-sample">
             <div class="form-group">
                 <label>Sample Type:</label>
                 <select name="sample_type" required>
-                    <option value="ESSAY" {% if samples|selectattr("type", "equalto", "ESSAY")|list|length < 5 %}{% else %}disabled{% endif %}>
+                    <option value="ESSAY" {% if samples|selectattr("type", "equalto", "ESSAY")|list|length >= 5 %}disabled{% endif %}>
                         Essay ({{ samples|selectattr("type", "equalto", "ESSAY")|list|length }}/5)
                     </option>
-                    <option value="TWEET" {% if samples|selectattr("type", "equalto", "TWEET")|list|length < 5 %}{% else %}disabled{% endif %}>
+                    <option value="TWEET" {% if samples|selectattr("type", "equalto", "TWEET")|list|length >= 5 %}disabled{% endif %}>
                         Tweet ({{ samples|selectattr("type", "equalto", "TWEET")|list|length }}/5)
                     </option>
                 </select>
@@ -26,10 +28,8 @@
 
             <div class="form-group">
                 <label>Content:</label>
-                <textarea name="content" required 
-                    placeholder="For essays: Write about a topic you're passionate about (min 300 words)
-For tweets: Write as you would normally tweet (max 300 characters)"
-                    rows="8"></textarea>
+                <textarea name="content" required rows="8" 
+                    placeholder="For essays: Write about a topic you're passionate about (min 300 words)&#10;For tweets: Write as you would normally tweet (max 300 characters)"></textarea>
             </div>
 
             <button type="submit" class="button primary">Submit Sample</button>
@@ -42,6 +42,8 @@ For tweets: Write as you would normally tweet (max 300 characters)"
         <div class="style-card">
             <h4>Thinking Style</h4>
             <p>{{ writing_style.thinking_style }}</p>
+
+            <br>
             
             <h4>Narrative Style</h4>
             <p>{{ writing_style.narrative_style }}</p>
@@ -71,88 +73,183 @@ For tweets: Write as you would normally tweet (max 300 characters)"
 </div>
 
 <style>
-.writing-style-container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-}
+    .writing-style-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
 
-.progress-bar {
-    background: #eee;
-    height: 20px;
-    border-radius: 10px;
-    margin: 20px 0;
-    position: relative;
-}
+    .writing-style-container h2 {
+        font-size: 2rem;
+        font-weight: 600;
+        margin-bottom: 2rem;
+        color: #1a1a1a;
+    }
 
-.progress {
-    background: #4CAF50;
-    height: 100%;
-    border-radius: 10px;
-    transition: width 0.3s ease;
-}
+    .progress-container {
+        margin: 2rem 0;
+    }
 
-.progress-bar span {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 12px;
-}
+    .progress-bar {
+        background: #e5e7eb;
+        height: 0.5rem;
+        border-radius: 9999px;
+        overflow: hidden;
+    }
 
-.sample-form {
-    background: #f5f5f5;
-    padding: 20px;
-    border-radius: 8px;
-    margin: 20px 0;
-}
+    .progress {
+        background: #2563eb;
+        height: 100%;
+        border-radius: 9999px;
+        transition: width 0.3s ease;
+    }
 
-.style-card {
-    background: #f5f5f5;
-    padding: 20px;
-    border-radius: 8px;
-    margin: 20px 0;
-}
+    .progress-text {
+        display: block;
+        text-align: center;
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+    }
 
-.sample-card {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 15px;
-    margin: 10px 0;
-}
+    .sample-form-card {
+        background: white;
+        border-radius: 1rem;
+        padding: 2rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin: 2rem 0;
+    }
 
-.sample-type {
-    font-weight: bold;
-    color: #666;
-}
+    .sample-form-card h3 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: #1a1a1a;
+    }
 
-.sample-content {
-    margin: 10px 0;
-    white-space: pre-wrap;
-}
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
 
-.sample-date {
-    font-size: 0.8em;
-    color: #666;
-}
+    .form-group label {
+        display: block;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        color: #374151;
+    }
 
-.reanalyze-form {
-    margin-top: 20px;
-    text-align: right;
-}
+    .form-group select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        background-color: white;
+        color: #1a1a1a;
+        cursor: pointer;
+    }
 
-.button.secondary {
-    background: #666;
-    color: white;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
+    .form-group select:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
 
-.button.secondary:hover {
-    background: #555;
-}
+    .form-group textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        resize: vertical;
+        min-height: 150px;
+    }
+
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
+
+    .button.primary {
+        background: #2563eb;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .button.primary:hover {
+        background: #1d4ed8;
+    }
+
+    select:disabled {
+        background-color: #f3f4f6;
+        cursor: not-allowed;
+    }
+
+    .style-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin: 2rem 0;
+    }
+
+    .sample-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        transition: transform 0.2s;
+    }
+
+    .sample-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .sample-type {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: #e5e7eb;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #4b5563;
+        margin-bottom: 0.5rem;
+    }
+
+    .sample-content {
+        margin: 10px 0;
+        white-space: pre-wrap;
+    }
+
+    .sample-date {
+        font-size: 0.8em;
+        color: #666;
+    }
+
+    .reanalyze-form {
+        margin-top: 20px;
+        text-align: right;
+    }
+
+    .button.secondary {
+        background: #666;
+        color: white;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .button.secondary:hover {
+        background: #555;
+    }
 </style>
 {% endblock %} 
