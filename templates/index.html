@@ -1,188 +1,336 @@
-{% extends "base.html" %} {% block title %}Home{% endblock %} {% block content
-%}
-<div class="landing-container">
-  <section class="hero">
-    <h1>Welcome to Alma AI</h1>
-    <p class="tagline">Your Personal AI-Powered Bluesky Assistant</p>
-  </section>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Alma AI</title>
+  </head>
+  <body>
+    <div class="bg-[#fff] text-[#050e19]">
+      <!-- nav BAR -->
+      <div
+        class="w-full justify-center h-fit text-[#050e19] flex px-4 gap-8 items-center pt-10 py-8 tracking-wider border-2 shadow-sm"
+      >
+        <div class="grow"></div>
+        <h1 class="text-4xl font-bold cursor-pointer">Alma AI</h1>
+        <div class="grow"></div>
 
-  <section class="features">
-    <h2>What We Offer</h2>
+        <!-- navLinks -->
+        <div
+          class="relative flex items-center group h-full text-md font-medium px-4"
+        >
+          <a
+            href="#"
+            class="relative no-underline after:content-[''] after:absolute after:left-1/2 after:bottom-0 after:h-[1px] after:w-0 after:bg-[#050e19] after:transition-all after:duration-300 after:-translate-x-1/2 after:opacity-0 group-hover:after:w-1/2 group-hover:after:opacity-100 text-[#050e19] hover:text-[#050e19] transition-all duration-300 text-[#2d5d98]"
+          >
+            Get Started
+          </a>
+        </div>
+        <div
+          class="relative flex items-center group h-full text-md font-medium px-4"
+        >
+          <a
+            href="#"
+            class="relative no-underline after:content-[''] after:absolute after:left-1/2 after:bottom-0 after:h-[1px] after:w-0 after:bg-[#050e19] after:transition-all after:duration-300 after:-translate-x-1/2 after:opacity-0 group-hover:after:w-1/2 group-hover:after:opacity-100 text-[#050e19] hover:text-[#050e19] transition-all duration-300"
+          >
+            Docs
+          </a>
+        </div>
+        <div
+          class="relative flex items-center group h-full text-md font-medium px-4"
+        >
+          <a
+            href="#"
+            class="relative no-underline after:content-[''] after:absolute after:left-1/2 after:bottom-0 after:h-[1px] after:w-0 after:bg-[#050e19] after:transition-all after:duration-300 after:-translate-x-1/2 after:opacity-0 group-hover:after:w-1/2 group-hover:after:opacity-100 text-[#050e19] hover:text-[#050e19] transition-all duration-300"
+          >
+            About
+          </a>
+        </div>
+        <div
+          class="relative flex items-center group h-full text-md font-medium px-4"
+        >
+          <a
+            href="#"
+            class="relative no-underline after:content-[''] after:absolute after:left-1/2 after:bottom-0 after:h-[1px] after:w-0 after:bg-[#050e19] after:transition-all after:duration-300 after:-translate-x-1/2 after:opacity-0 group-hover:after:w-1/2 group-hover:after:opacity-100 text-[#050e19] hover:text-[#050e19] transition-all duration-300"
+          >
+            Reviews
+          </a>
+        </div>
 
-    <div class="feature-grid">
-      <div class="feature-card">
-        <h3>Newsletter to Threads</h3>
-        <p>
-          Automatically convert your favorite newsletters into engaging Bluesky
-          threads, maintaining your unique voice and style.
-        </p>
+        <div class="flex grow"></div>
+        |
+        <div class="font-medium text-md hover:text-gray-500 cursor-pointer">
+          Sign In
+        </div>
+        <div class="grow"></div>
       </div>
+      <div
+        class="flex w-[80%] py-10 mx-auto flex-col items-center gap-20 h-full"
+      >
+        <!-- <body /> -->
 
-      <div class="feature-card">
-        <h3>Smart Topic Research</h3>
-        <p>
-          Enter any topic and get AI-generated threads based on comprehensive
-          web research, perfect for sharing insights with your followers.
-        </p>
-      </div>
+        <div
+          class="w-full h-full py-4 flex-col flex gap-10 justify-center items-center"
+        >
+          <div class="flex flex-col w-[70%] gap-5 justify-center items-center">
+            <h1 class="text-5xl font-bold tracking-wide w-full text-center">
+              <span class="text-[#2d5d98]"> AI-Powered </span> Revolution in
+              Wind Turbine Inspections
+            </h1>
+            <p class="w-[70%] tracking-wide text-center">
+              Our cutting-edge AI technology ensures precise and efficient
+              inspections, allowing you to make data-driven decisions that move
+              your
+            </p>
+          </div>
 
-      <div class="feature-card">
-        <h3>Personalized Writing Style</h3>
-        <p>
-          Train the AI to match your writing style through essay and tweet
-          samples, ensuring all content feels authentically you.
-        </p>
-      </div>
+          <!-- <ImageSlider /> -->
+          <div class="w-full flex items-center justify-center py-8">
+            <div
+              id="slider"
+              class="w-[70%] aspect-[20/9] rounded-3xl overflow-hidden relative"
+            >
+              <img
+                id="sliderImage"
+                src="https://plus.unsplash.com/premium_photo-1678734268737-42e68229d04f?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8MTYlM0E5JTIweXQlMjBiYW5uZXJ8ZW58MHx8MHx8fDA%3D"
+                alt="Image 1"
+                class="w-full h-full object-cover rounded-3xl transition-opacity duration-500 opacity-100"
+              />
+            </div>
+          </div>
 
-      <div class="feature-card">
-        <h3>Interactive Mentions</h3>
-        <p>
-          Automatically respond to mentions from your followers using your
-          personal writing style, maintaining engaging conversations.
-        </p>
-      </div>
+          <script>
+            const images = [
+              "https://plus.unsplash.com/premium_photo-1678734268737-42e68229d04f?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8MTYlM0E5JTIweXQlMjBiYW5uZXJ8ZW58MHx8MHx8fDA%3D",
+              "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?w=500&auto=format&fit=crop&q=60",
+              "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?w=500&auto=format&fit=crop&q=60",
+            ];
 
-      <div class="feature-card">
-        <h3>Draft Management</h3>
-        <p>
-          Review, edit, and perfect your AI-generated threads before posting.
-          Full control over your content.
-        </p>
-      </div>
+            let currentImageIndex = 0;
+            const sliderImage = document.getElementById("sliderImage");
 
-      <div class="feature-card">
-        <h3>Auto-Posting</h3>
-        <p>
-          Optional automatic posting of approved content, keeping your feed
-          active while maintaining quality control.
-        </p>
+            function changeImage() {
+              sliderImage.classList.add("fade"); // Fade out
+              setTimeout(() => {
+                currentImageIndex = (currentImageIndex + 1) % images.length;
+                sliderImage.src = images[currentImageIndex];
+                sliderImage.classList.remove("fade"); // Fade in
+              }, 500); // Duration of fade-out effect
+            }
+
+            setInterval(changeImage, 5000); // Change image every 5 seconds
+          </script>
+        </div>
+        <div class="w-full">
+          <div class="flex w-full items-center justify-center h-full">
+            <div class="w-[50%] flex flex-col gap-2">
+              <p>Our Service</p>
+              <h1 class="text-6xl font-bold">
+                What <span class="text-[#305685]">Services</span> We're Offering
+              </h1>
+            </div>
+
+            <div class="w-[60%]">
+              we offer services that can help businesses improve their
+              visibility and business reputation online, expand market reach,
+              and increase turnover through effective digital strategies.
+              Following are the services we provide
+            </div>
+          </div>
+          <!-- <Services /> -->
+          <div
+            class="grid grid-cols-3 w-[90%] mx-auto gap-10 p-14 items-center justify-center"
+          >
+            <div
+              class="aspect-[7/9] rounded-3xl bg-[#e6eaef] hover:bg-[#FEFEFA] font-medium p-7 flex flex-col transition-transform transform hover:scale-105 hover:shadow-lg"
+            >
+              <div
+                class="font-bold tracking-wide w-full text-2xl text-[#2c5c96]"
+              >
+                Newsletter to Threads
+              </div>
+              <div class="grow"></div>
+              <p class="font-medium w-full">
+                Automatically convert your favorite newsletters into engaging
+                Bluesky threads, maintaining your unique voice and style.
+              </p>
+              <div class="grow"></div>
+            </div>
+
+            <div
+              class="aspect-[7/9] rounded-3xl bg-[#e6eaef] hover:bg-[#FEFEFA] font-medium p-7 flex flex-col transition-transform transform hover:scale-105 hover:shadow-lg"
+            >
+              <div
+                class="font-bold tracking-wide w-full text-2xl text-[#2c5c96]"
+              >
+                Smart Topic Research
+              </div>
+              <div class="grow"></div>
+              <p class="font-medium w-full">
+                Enter any topic and get AI-generated threads based on
+                comprehensive web research, perfect for sharing insights with
+                your followers.
+              </p>
+              <div class="grow"></div>
+            </div>
+
+            <div
+              class="aspect-[7/9] rounded-3xl bg-[#e6eaef] hover:bg-[#FEFEFA] font-medium p-7 flex flex-col transition-transform transform hover:scale-105 hover:shadow-lg"
+            >
+              <div
+                class="font-bold tracking-wide w-full text-2xl text-[#2c5c96]"
+              >
+                Personalized Writing Style
+              </div>
+              <div class="grow"></div>
+              <p class="font-medium w-full">
+                Train the AI to match your writing style through essay and tweet
+                samples, ensuring all content feels authentically you.
+              </p>
+              <div class="grow"></div>
+            </div>
+
+            <div
+              class="aspect-[7/9] rounded-3xl bg-[#e6eaef] hover:bg-[#FEFEFA] font-medium p-7 flex flex-col transition-transform transform hover:scale-105 hover:shadow-lg"
+            >
+              <div
+                class="font-bold tracking-wide w-full text-2xl text-[#2c5c96]"
+              >
+                Interactive Mentions
+              </div>
+              <div class="grow"></div>
+              <p class="font-medium w-full">
+                Automatically respond to mentions from your followers using your
+                personal writing style, maintaining engaging conversations.
+              </p>
+              <div class="grow"></div>
+            </div>
+
+            <div
+              class="aspect-[7/9] rounded-3xl bg-[#e6eaef] hover:bg-[#FEFEFA] font-medium p-7 flex flex-col transition-transform transform hover:scale-105 hover:shadow-lg"
+            >
+              <div
+                class="font-bold tracking-wide w-full text-2xl text-[#2c5c96]"
+              >
+                Draft Management
+              </div>
+              <div class="grow"></div>
+              <p class="font-medium w-full">
+                Review, edit, and perfect your AI-generated threads before
+                posting. Full control over your content.
+              </p>
+              <div class="grow"></div>
+            </div>
+
+            <div
+              class="aspect-[7/9] rounded-3xl bg-[#e6eaef] hover:bg-[#FEFEFA] font-medium p-7 flex flex-col transition-transform transform hover:scale-105 hover:shadow-lg"
+            >
+              <div
+                class="font-bold tracking-wide w-full text-2xl text-[#2c5c96]"
+              >
+                Auto-Posting
+              </div>
+              <div class="grow"></div>
+              <p class="font-medium w-full">
+                Review, edit, and perfect your AI-generated threads before
+                posting. Full control over your content.
+              </p>
+              <div class="grow"></div>
+            </div>
+          </div>
+        </div>
       </div>
+      <!-- <footer /> -->
+      <footer class="bg-[#ffffff] px-8 py-10">
+        <div
+          class="grid grid-cols-1 w-full md:grid-cols-4 gap-20 border-t border-gray-700 pt-8"
+        >
+          <div class="">
+            <h3 class="text-3xl font-bold">Alma AI</h3>
+            <p class="mt-4 text-sm text-[#050e19]">
+              Make the right data-driven decisions that move your business.
+            </p>
+          </div>
+          <div class="flex flex-col">
+            <a href="#about" class="text-[#050e19] hover:text-gray-400 mb-2">
+              About
+            </a>
+            <a href="#jobs" class="text-[#050e19] hover:text-gray-400 mb-2">
+              Jobs
+            </a>
+            <a href="#docs" class="text-[#050e19] hover:text-gray-400 mb-2">
+              Docs
+            </a>
+          </div>
+          <div class="flex flex-col">
+            <a href="#terms" class="text-[#050e19] hover:text-gray-400 mb-2">
+              Terms and Conditions
+            </a>
+            <a href="#privacy" class="text-[#050e19] hover:text-gray-400 mb-2">
+              Privacy Policy
+            </a>
+            <a
+              href="#cookie-policy"
+              class="text-[#050e19] hover:text-gray-400 mb-2"
+            >
+              Cookie Policy
+            </a>
+          </div>
+          <div
+            class="mt-8 flex flex-col md:flex-col md:justify-between items-center"
+          >
+            <p class="text-[#050e19]">Contact Us</p>
+            <div class="flex space-x-4 mt-4 md:mt-0">
+              <a href="#" class="text-[#050e19] hover:text-gray-400">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  class="bi bi-github"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"
+                  />
+                </svg>
+              </a>
+              <a href="#" class="text-[#050e19] hover:text-gray-400">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  class="bi bi-twitter-x"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    d="M12.6.75h2.454l-5.36 6.142L16 15.25h-4.937l-3.867-5.07-4.425 5.07H.316l5.733-6.57L0 .75h5.063l3.495 4.633L12.601.75Zm-.86 13.028h1.36L4.323 2.145H2.865z"
+                  />
+                </svg>
+              </a>
+              <a href="#" class="text-[#050e19] hover:text-gray-400">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  class="bi bi-instagram"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.9 3.9 0 0 0-1.417.923A3.9 3.9 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.9 3.9 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.9 3.9 0 0 0-.923-1.417A3.9 3.9 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 7.998 0zm-.717 1.442h.718c2.136 0 2.389.007 3.232.046.78.035 1.204.166 1.486.275.373.145.64.319.92.599s.453.546.598.92c.11.281.24.705.275 1.485.039.843.047 1.096.047 3.231s-.008 2.389-.047 3.232c-.035.78-.166 1.203-.275 1.485a2.5 2.5 0 0 1-.599.919c-.28.28-.546.453-.92.598-.28.11-.704.24-1.485.276-.843.038-1.096.047-3.232.047s-2.39-.009-3.233-.047c-.78-.036-1.203-.166-1.485-.276a2.5 2.5 0 0 1-.92-.598 2.5 2.5 0 0 1-.6-.92c-.109-.281-.24-.705-.275-1.485-.038-.843-.046-1.096-.046-3.233s.008-2.388.046-3.231c.036-.78.166-1.204.276-1.486.145-.373.319-.64.599-.92s.546-.453.92-.598c.282-.11.705-.24 1.485-.276.738-.034 1.024-.044 2.515-.045zm4.988 1.328a.96.96 0 1 0 0 1.92.96.96 0 0 0 0-1.92m-4.27 1.122a4.109 4.109 0 1 0 0 8.217 4.109 4.109 0 0 0 0-8.217m0 1.441a2.667 2.667 0 1 1 0 5.334 2.667 2.667 0 0 1 0-5.334"
+                  />
+                </svg>
+              </a>
+              <a href="#" class="text-[#050e19] hover:text-gray-400">
+                <i class="fab fa-instagram"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
-  </section>
-
-  <section class="cta">
-    {% if not user %}
-    <h2>Get Started Today</h2>
-    <p>
-      Join now to experience AI-powered social media management that maintains
-      your authentic voice.
-    </p>
-    <div class="cta-buttons">
-      <a href="/signup" class="button primary">Sign Up</a>
-      <a href="/login" class="button secondary">Login</a>
-    </div>
-    {% else %}
-    <h2>Welcome Back!</h2>
-    <p>Continue managing your Bluesky presence with AI assistance.</p>
-    <a href="/dashboard" class="button primary">Go to Dashboard</a>
-    {% endif %}
-  </section>
-</div>
-
-<style>
-  .landing-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem;
-  }
-
-  .hero {
-    text-align: center;
-    padding: 4rem 0;
-    background: linear-gradient(to right, #2563eb11, #2563eb22);
-    border-radius: 1rem;
-    margin-bottom: 3rem;
-  }
-
-  .hero h1 {
-    font-size: 3rem;
-    color: #1a1a1a;
-    margin-bottom: 1rem;
-  }
-
-  .tagline {
-    font-size: 1.5rem;
-    color: #4b5563;
-  }
-
-  .features {
-    margin: 4rem 0;
-  }
-
-  .features h2 {
-    text-align: center;
-    margin-bottom: 2rem;
-    font-size: 2rem;
-    color: #1a1a1a;
-  }
-
-  .feature-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
-    margin: 2rem 0;
-  }
-
-  .feature-card {
-    background: white;
-    padding: 2rem;
-    border-radius: 1rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    transition: transform 0.2s, box-shadow 0.2s;
-  }
-
-  .feature-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  .feature-card h3 {
-    color: #2563eb;
-    margin-bottom: 1rem;
-    font-size: 1.25rem;
-  }
-
-  .feature-card p {
-    color: #4b5563;
-    line-height: 1.6;
-  }
-
-  .cta {
-    text-align: center;
-    padding: 4rem 0;
-    background: white;
-    border-radius: 1rem;
-    margin-top: 3rem;
-  }
-
-  .cta h2 {
-    margin-bottom: 1rem;
-    font-size: 2rem;
-  }
-
-  .cta p {
-    color: #4b5563;
-    margin-bottom: 2rem;
-  }
-
-  .cta-buttons {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-  }
-
-  @media (max-width: 768px) {
-    .hero h1 {
-      font-size: 2rem;
-    }
-
-    .tagline {
-      font-size: 1.25rem;
-    }
-
-    .feature-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-</style>
-{% endblock %}
+  </body>
+</html>
