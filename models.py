@@ -6,6 +6,7 @@ from datetime import datetime
 class UserBase(BaseModel):
     email: EmailStr
     auto_post: bool = False
+    auto_reply: bool = False
 
 
 class UserCreate(BaseModel):
@@ -57,6 +58,8 @@ class DraftThread(BaseModel):
     topic: str
     tweets: List[str]
     created_at: datetime
+    is_reply: bool = False
+    original_post: Optional[dict] = None
 
     class Config:
         from_attributes = True

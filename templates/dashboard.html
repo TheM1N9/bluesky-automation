@@ -37,6 +37,18 @@ content %}
       <div class="auto-post-section">
         <div class="setting-header">
           <h3>Automatic Posting</h3>
+          <div class="info-tooltip-container">
+            <button
+              class="info-button"
+              aria-label="Information about automatic posting"
+            >
+              <i class="fas fa-info-circle"></i>
+            </button>
+            <div class="tooltip">
+              When enabled, the bot will automatically post threads to Bluesky.
+              When disabled, threads will be saved as drafts for your review.
+            </div>
+          </div>
           <label class="switch">
             <input
               type="checkbox"
@@ -51,26 +63,88 @@ content %}
             <span class="slider"></span>
           </label>
         </div>
-        <p class="setting-description">
-          When enabled, the bot will automatically post threads to Bluesky. When
-          disabled, threads will be saved as drafts for your review.
-        </p>
+
+        <div class="setting-header" style="margin-top: 1rem">
+          <h3>Automatic Replies</h3>
+          <div class="info-tooltip-container">
+            <button
+              class="info-button"
+              aria-label="Information about automatic replies"
+            >
+              <i class="fas fa-info-circle"></i>
+            </button>
+            <div class="tooltip">
+              When enabled, the bot will automatically reply to mentions. When
+              disabled, mentions will be saved as drafts for your review.
+            </div>
+          </div>
+          <label class="switch">
+            <input
+              type="checkbox"
+              name="auto_reply"
+              {%
+              if
+              user.auto_reply
+              %}checked{%
+              endif
+              %}
+            />
+            <span class="slider"></span>
+          </label>
+        </div>
       </div>
     </div>
 
     <!-- Topics Card -->
     <div class="card">
-      <h2>Topics of Interest</h2>
-      <textarea
-        placeholder="Enter topics separated by commas (e.g., technology, business, science, health)"
-        rows="4"
-      >
+      <div class="setting-header">
+        <h2>Topics of Interest</h2>
+        <div class="info-tooltip-container">
+          <button class="info-button" aria-label="Information about topics">
+            <i class="fas fa-info-circle"></i>
+          </button>
+          <div class="tooltip">
+            Add topics you're interested in. The bot will generate content and
+            threads based on these topics. Separate multiple topics with commas.
+          </div>
+        </div>
+        <button id="editTopics" class="button secondary">
+          Edit <i class="fa-solid fa-pen"></i>
+        </button>
+      </div>
+
+      <div class="topics-container">
+        <div class="topics-display" id="topicsDisplay">
+          {% for topic in user.topics %}
+          <span class="topic-tag">
+            {{ topic }}
+            <button
+              class="topic-remove"
+              data-topic="{{ topic }}"
+              style="display: none"
+            >
+              ×
+            </button>
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="topics-edit-container" style="display: none">
+        <div class="textarea-wrapper">
+          <textarea
+            id="topics"
+            placeholder="Enter topics separated by commas (e.g., AI, Technology, Space Exploration)"
+            rows="4"
+          >
 {{ user.topics|join(', ') if user.topics else '' }}</textarea
-      >
-      <p class="help-text">
-        These topics will help us better process your newsletters
-      </p>
-      <button type="submit" class="button secondary">Update Topics</button>
+          >
+        </div>
+        <div class="button-group">
+          <button id="saveTopics" class="button primary">Save</button>
+          <button id="cancelEdit" class="button secondary">Cancel</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -513,6 +587,132 @@ content %}
     background: #f59e0b;
     color: white;
   }
+
+  /* Info Button and Tooltip Styles */
+  .setting-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .info-tooltip-container {
+    position: relative;
+  }
+
+  .info-button {
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0.25rem;
+    font-size: 1rem;
+    transition: color 0.2s;
+  }
+
+  .info-button:hover {
+    color: #2563eb;
+  }
+
+  .tooltip {
+    display: none;
+    position: absolute;
+    background-color: #1f2937;
+    color: white;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    width: 250px;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    z-index: 10;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .tooltip::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 0 6px 6px 6px;
+    border-style: solid;
+    border-color: transparent transparent #1f2937 transparent;
+  }
+
+  .info-tooltip-container:hover .tooltip {
+    display: block;
+  }
+
+  /* Optional: Add mobile responsiveness */
+  @media (max-width: 640px) {
+    .tooltip {
+      width: 200px;
+    }
+  }
+
+  /* Topics Styles */
+  .topics-container {
+    margin-top: 1rem;
+  }
+
+  .topics-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    min-height: 2rem;
+  }
+
+  .topic-tag {
+    background-color: #e5e7eb;
+    color: #374151;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .topic-remove {
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0 0.25rem;
+    font-size: 1rem;
+    line-height: 1;
+    border-radius: 50%;
+    transition: all 0.2s;
+  }
+
+  .topic-remove:hover {
+    color: #dc2626;
+    background-color: #fee2e2;
+  }
+
+  .topics-edit-container {
+    margin-top: 1rem;
+  }
+
+  .button-group {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  #editTopics {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  #editTopics i {
+    margin-left: 0.25rem;
+  }
 </style>
 
 <script>
@@ -689,13 +889,12 @@ content %}
         .filter((t) => t);
 
       try {
+        const formData = new FormData();
+        formData.append("topics", topics.join(", "));
+
         const response = await fetch("/update-topics", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ topics }),
-          credentials: "same-origin",
+          body: formData,
         });
 
         if (response.ok) {
@@ -726,6 +925,145 @@ content %}
     } else {
       charCount.style.color = "#6b7280";
     }
+  });
+
+  // Update the settings event listener to include auto_reply
+  document
+    .querySelectorAll('input[name="auto_post"], input[name="auto_reply"]')
+    .forEach((toggle) => {
+      toggle.addEventListener("change", async function () {
+        try {
+          const response = await fetch("/update-settings", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              auto_post: document.querySelector('input[name="auto_post"]')
+                .checked,
+              auto_reply: document.querySelector('input[name="auto_reply"]')
+                .checked,
+            }),
+            credentials: "same-origin",
+          });
+
+          if (response.ok) {
+            toast.show("Settings updated successfully!", "success");
+          } else {
+            const error = await response.json();
+            throw new Error(error.detail || "Failed to update settings");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          toast.show(error.message, "error");
+          // Revert toggle if failed
+          this.checked = !this.checked;
+        }
+      });
+    });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const editButton = document.getElementById("editTopics");
+    const topicsDisplay = document.querySelector(".topics-display");
+    const editContainer = document.querySelector(".topics-edit-container");
+    const topicsTextarea = document.getElementById("topics");
+    const saveButton = document.getElementById("saveTopics");
+    const cancelButton = document.getElementById("cancelEdit");
+    const removeButtons = document.querySelectorAll(".topic-remove");
+
+    // Show edit container
+    editButton.addEventListener("click", () => {
+      editButton.style.display = "none";
+      editContainer.style.display = "block";
+      // Show remove buttons when editing
+      removeButtons.forEach(
+        (button) => (button.style.display = "inline-block")
+      );
+    });
+
+    // Handle save
+    saveButton.addEventListener("click", async () => {
+      const topics = topicsTextarea.value
+        .split(",")
+        .map((topic) => topic.trim())
+        .filter((topic) => topic.length > 0);
+
+      try {
+        // Create FormData and append topics
+        const formData = new FormData();
+        formData.append("topics", topics.join(", "));
+
+        const response = await fetch("/update-topics", {
+          method: "POST",
+          body: formData, // Send as FormData instead of JSON
+        });
+
+        if (response.ok) {
+          // Update topics display
+          topicsDisplay.innerHTML = topics
+            .map(
+              (topic) => `
+            <span class="topic-tag">
+              ${topic}
+              <button class="topic-remove" data-topic="${topic}" style="display: none;">×</button>
+            </span>
+          `
+            )
+            .join("");
+
+          // Switch back to display view
+          editContainer.style.display = "none";
+          editButton.style.display = "block";
+
+          // Show success message
+          toast.show("Topics updated successfully", "success");
+        } else {
+          throw new Error("Failed to update topics");
+        }
+      } catch (error) {
+        toast.show(error.message, "error");
+      }
+    });
+
+    // Handle cancel
+    cancelButton.addEventListener("click", () => {
+      editContainer.style.display = "none";
+      editButton.style.display = "block";
+      // Hide remove buttons when canceling
+      removeButtons.forEach((button) => (button.style.display = "none"));
+    });
+
+    // Handle topic removal
+    topicsDisplay.addEventListener("click", async (e) => {
+      if (e.target.classList.contains("topic-remove")) {
+        const topicToRemove = e.target.dataset.topic;
+        const currentTopics = Array.from(
+          topicsDisplay.querySelectorAll(".topic-tag")
+        )
+          .map((tag) => tag.textContent.trim().slice(0, -1)) // Remove the × button
+          .filter((topic) => topic !== topicToRemove);
+
+        try {
+          const formData = new FormData();
+          formData.append("topics", currentTopics.join(", "));
+
+          const response = await fetch("/update-topics", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (response.ok) {
+            e.target.parentElement.remove();
+            topicsTextarea.value = currentTopics.join(", ");
+            showToast("Topic removed successfully", "success");
+          } else {
+            throw new Error("Failed to remove topic");
+          }
+        } catch (error) {
+          showToast(error.message, "error");
+        }
+      }
+    });
   });
 </script>
 {% endblock %}

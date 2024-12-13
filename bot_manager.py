@@ -16,6 +16,7 @@ class BotManager:
         bluesky_password: str,
         topics: List[str] = [],
         auto_post: bool = False,
+        auto_reply: bool = False,
     ):
         if user_email in self.bots:
             return False
@@ -27,6 +28,7 @@ class BotManager:
             topics=topics,
             user_email=user_email,
             auto_post=auto_post,
+            auto_reply=auto_reply,
         )
         await bot.initialize()
 

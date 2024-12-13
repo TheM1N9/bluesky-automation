@@ -60,6 +60,35 @@
     </div>
   </section>
 
+  <section class="how-it-works">
+    <h2>How It Works</h2>
+    <div class="steps-container">
+      <div class="step">
+        <div class="step-number">1</div>
+        <h3>Sign Up</h3>
+        <p>Create your account and connect your Bluesky profile</p>
+      </div>
+
+      <div class="step">
+        <div class="step-number">2</div>
+        <h3>Customize</h3>
+        <p>Set your preferences and train AI with your writing style</p>
+      </div>
+
+      <div class="step">
+        <div class="step-number">3</div>
+        <h3>Generate</h3>
+        <p>Let AI create engaging content based on your interests</p>
+      </div>
+
+      <div class="step">
+        <div class="step-number">4</div>
+        <h3>Review & Post</h3>
+        <p>Edit generated content and share with your audience</p>
+      </div>
+    </div>
+  </section>
+
   <section class="cta">
     {% if not user %}
     <h2>Get Started Today</h2>
@@ -171,6 +200,61 @@
     justify-content: center;
   }
 
+  .how-it-works {
+    margin: 4rem 0;
+    text-align: center;
+  }
+
+  .how-it-works h2 {
+    font-size: 2rem;
+    color: #1a1a1a;
+    margin-bottom: 3rem;
+  }
+
+  .steps-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+    margin: 0 auto;
+    max-width: 1000px;
+  }
+
+  .step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+  }
+
+  .step-number {
+    width: 4rem;
+    height: 4rem;
+    background: #2563eb;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .step h3 {
+    color: #1a1a1a;
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+  }
+
+  .step p {
+    color: #4b5563;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
   @media (max-width: 768px) {
     .hero h1 {
       font-size: 2rem;
@@ -182,6 +266,20 @@
 
     .feature-grid {
       grid-template-columns: 1fr;
+    }
+
+    .steps-container {
+      flex-direction: column;
+      gap: 3rem;
+    }
+
+    .step:not(:last-child)::after {
+      width: 2px;
+      height: 2rem;
+      top: auto;
+      bottom: -2.5rem;
+      left: 50%;
+      transform: translateX(-50%);
     }
   }
 </style>

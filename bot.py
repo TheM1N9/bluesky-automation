@@ -28,6 +28,7 @@ class BlueskyBot:
         check_interval: int = 60,
         user_email: str = "",
         auto_post: bool = False,
+        auto_reply: bool = False,
     ):
         """Initialize Bluesky Bot with Gmail monitoring"""
         # Load environment variables
@@ -66,6 +67,7 @@ class BlueskyBot:
         self.user_email = user_email
         self.user_topics = topics
         self.auto_post = auto_post
+        self.auto_reply = auto_reply
 
     async def initialize(self):
         """Async initialization"""
@@ -547,14 +549,10 @@ class BlueskyBot:
 
             for post in mentions.posts:
                 try:
-                    self.logger.info(f"Processing mention CID: {post.cid}")
-
                     # Check if already processed
                     is_processed = await self.db.is_mention_processed(
                         self.user_email, post.cid
                     )
-                    self.logger.info(f"Is mention already processed? {is_processed}")
-
                     if is_processed:
                         continue
 
@@ -567,23 +565,27 @@ class BlueskyBot:
                         }
                     )
 
-                    # Convert post_data.value to string and extract text using regex
+                    # Extract and process text
                     post_value_str = str(post_data.value)
                     text_match = re.search(r"text='([^']*)'", post_value_str)
                     post_text = text_match.group(1) if text_match else ""
-
-                    # Ensure text is properly encoded
                     post_text = post_text.encode("utf-8").decode("utf-8")
 
-                    self.logger.info(f"Extracted post text: {post_text}")
-
+                    # Generate reply
                     reply = await self.generate_contextual_reply(post_text)
-                    self.logger.info(f"Generated reply: {reply}")
 
-                    if reply:
+                    # Create original post data
+                    original_post = {
+                        "author": post.author.handle,
+                        "text": post_text,
+                        "timestamp": post.indexed_at,
+                        "uri": post.uri,
+                        "cid": post.cid,
+                    }
+
+                    if self.auto_reply:
+                        # Post reply if auto-reply is enabled
                         text = f"@{post.author.handle} {reply}"
-                        self.logger.info(f"Posting reply: {text}")
-
                         response = self.client.send_post(
                             text=text,
                             reply_to={
@@ -591,29 +593,28 @@ class BlueskyBot:
                                 "parent": {"uri": post.uri, "cid": post.cid},
                             },
                         )
+                    else:
+                        # Save as draft if auto-reply is disabled
+                        self.logger.info("Auto-reply is disabled, saving as draft")
+                        await self.db.save_draft_thread(
+                            user_email=self.user_email,
+                            topic=f"Reply to @{post.author.handle}",
+                            tweets=[reply],
+                            is_reply=True,
+                            original_post=original_post,
+                        )
 
-                        if response:
-                            # Create a simplified mention data structure
-                            mention_data = {
-                                "cid": post.cid,
-                                "author_handle": post.author.handle,
-                                "author_did": post.author.did,
-                                "text": post_text,  # Using the extracted and encoded text
-                                "reply": text,
-                                "reply_timestamp": datetime.now(
-                                    timezone.utc
-                                ).isoformat(),
-                                "timestamp": datetime.now(timezone.utc).isoformat(),
-                            }
-
-                            await self.db.add_processed_mention(
-                                self.user_email, mention_data
-                            )
-                            self.logger.info(
-                                f"Successfully replied to {post.author.handle}"
-                            )
-
-                    await asyncio.sleep(2)
+                    # Mark as processed
+                    mention_data = {
+                        "cid": post.cid,
+                        "author_handle": post.author.handle,
+                        "author_did": post.author.did,
+                        "text": post_text,
+                        "reply": reply,
+                        "reply_timestamp": datetime.now(timezone.utc).isoformat(),
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    }
+                    await self.db.add_processed_mention(self.user_email, mention_data)
 
                 except Exception as e:
                     self.logger.error(f"Error processing mention {post.cid}: {str(e)}")

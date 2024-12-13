@@ -429,13 +429,19 @@ async def update_settings(
         # Update user settings in database
         await db.client.newsletter_bot.users.update_one(
             {"email": user["email"]},
-            {"$set": {"auto_post": settings.get("auto_post", False)}},
+            {
+                "$set": {
+                    "auto_post": settings.get("auto_post", False),
+                    "auto_reply": settings.get("auto_reply", False),
+                }
+            },
         )
 
-        # If auto_post is being disabled, make sure any existing bot instance
-        # is updated
+        # Update bot instance settings if it exists
         if user["email"] in bot_manager.bots:
-            bot_manager.bots[user["email"]].auto_post = settings.get("auto_post", False)
+            bot = bot_manager.bots[user["email"]]
+            bot.auto_post = settings.get("auto_post", False)
+            bot.auto_reply = settings.get("auto_reply", False)
 
         return {"success": True}
     except Exception as e:
@@ -616,3 +622,28 @@ async def delete_account(
     await db.delete_user(current_user["email"])
     request.session.clear()
     return {"message": "Account deleted successfully"}
+
+
+@app.get("/get-drafts")
+async def get_drafts(request: Request, type: str = "all"):
+    user = await get_current_user_from_session(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    try:
+        # Get all drafts for the user
+        drafts = await db.get_user_drafts(user["email"])
+
+        # Filter based on type
+        if type == "newsletter":
+            drafts = [d for d in drafts if not d.get("is_reply", False)]
+        elif type == "reply":
+            drafts = [d for d in drafts if d.get("is_reply", False)]
+
+        # Convert ObjectId to string for JSON serialization
+        for draft in drafts:
+            draft["_id"] = str(draft["_id"])
+
+        return drafts
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

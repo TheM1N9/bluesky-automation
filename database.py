@@ -47,15 +47,25 @@ class Database:
     def verify_password(self, plain_password, hashed_password):
         return self.pwd_context.verify(plain_password, hashed_password)
 
-    async def save_draft_thread(self, user_email: str, topic: str, tweets: List[str]):
+    async def save_draft_thread(
+        self,
+        user_email: str,
+        topic: str,
+        tweets: List[str],
+        is_reply: bool = False,
+        original_post: Optional[dict] = None,
+    ):
         """Save a draft thread to the database"""
         draft = {
             "user_email": user_email,
             "topic": topic,
             "tweets": tweets,
             "created_at": datetime.utcnow(),
+            "is_reply": is_reply,
+            "original_post": original_post,
         }
-        await self.client.newsletter_bot.draft_threads.insert_one(draft)
+        result = await self.client.newsletter_bot.draft_threads.insert_one(draft)
+        return str(result.inserted_id)
 
     async def get_user_drafts(self, user_email: str):
         cursor = self.client.newsletter_bot.draft_threads.find(

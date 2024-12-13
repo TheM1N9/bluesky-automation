@@ -1,37 +1,4 @@
 {% extends "base.html" %} {% block content %}
-<div class="drafts-container">
-  <h2>Your Draft Threads</h2>
-
-  {% for draft in drafts %}
-  <div class="draft-card" data-id="{{ draft._id }}">
-    <div class="draft-header">
-      <h3>{{ draft.topic }}</h3>
-    </div>
-
-    <div class="tweets-container">
-      {% for tweet in draft.tweets %}
-      <div class="tweet-wrapper">
-        <textarea class="tweet-edit" rows="4" maxlength="300">
-{{ tweet }}</textarea
-        >
-        <div class="character-count" aria-live="polite"><span>0</span>/300</div>
-      </div>
-      {% endfor %}
-    </div>
-
-    <div class="draft-actions">
-      <button class="button primary post-thread">Post Thread</button>
-      <button class="button secondary save-edits">Save Edits</button>
-      <button class="button danger delete-draft">Delete</button>
-    </div>
-  </div>
-  {% endfor %} {% if not drafts %}
-  <div class="empty-state">
-    <p>No draft threads yet. Generate a thread to get started!</p>
-  </div>
-  {% endif %}
-</div>
-
 <div id="toast" class="toast">
   <div class="toast-content">
     <span class="toast-message"></span>
@@ -39,432 +6,488 @@
   </div>
 </div>
 
-<style>
-  .drafts-container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 2rem;
-  }
+<div class="drafts-container">
+  <div
+    class="drafts-header"
+    style="display: flex; justify-content: space-between; align-items: center"
+  >
+    <h2>Your Draft Threads</h2>
+    <div class="filter-section">
+      <select id="threadTypeFilter" class="thread-filter">
+        <option value="all">All Drafts</option>
+        <option value="newsletter">Newsletter Threads</option>
+        <option value="reply">Reply Threads</option>
+      </select>
+    </div>
+  </div>
 
-  .drafts-container h2 {
-    font-size: 2rem;
-    font-weight: 600;
-    margin-bottom: 2rem;
-    color: #1a1a1a;
-  }
+  <div class="drafts-content">
+    {% for draft in drafts %}
+    <div
+      class="draft-card {% if draft.is_reply %}draft-reply{% endif %}"
+      data-id="{{ draft._id }}"
+    >
+      <div class="draft-header">
+        <h3>{{ draft.topic }}</h3>
+        {% if draft.is_reply %}
+        <span class="reply-badge">Reply Draft</span>
+        {% endif %}
+      </div>
 
-  .draft-card {
-    background: white;
-    border-radius: 1rem;
-    padding: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
-    transition: transform 0.2s ease;
-  }
+      {% if draft.is_reply and draft.original_post %}
+      <div class="original-post">
+        <div class="original-author">@{{ draft.original_post.author }}</div>
+        <div class="original-text">{{ draft.original_post.text }}</div>
+        <div class="original-timestamp">
+          {{ draft.original_post.timestamp }}
+        </div>
+      </div>
+      {% endif %}
 
-  .draft-card:hover {
-    transform: translateY(-2px);
-  }
+      <div class="tweets-container" id="tweets-{{ draft._id }}">
+        {% for tweet in draft.tweets %}
+        <div class="tweet-wrapper">
+          <textarea class="tweet-edit" rows="4" maxlength="300" readonly>
+{{ tweet }}</textarea
+          >
+          <div class="character-count" aria-live="polite">
+            <span>{{ tweet|length }}</span>/300
+          </div>
+        </div>
+        {% endfor %}
+      </div>
 
-  .draft-header {
-    margin-bottom: 1.5rem;
-  }
+      <div
+        class="draft-actions normal-actions"
+        id="normal-actions-{{ draft._id }}"
+      >
+        <button class="button primary post-thread">
+          <span class="button-text"
+            >Post {% if draft.is_reply %}Reply{% else %}Thread{% endif %}</span
+          >
+          <span class="button-loader" style="display: none">
+            <i class="fas fa-spinner fa-spin"></i>
+          </span>
+        </button>
+        <button
+          class="button secondary edit-draft"
+          onclick="toggleEditMode('{{ draft._id }}')"
+        >
+          <span class="button-text">Edit </span>
+          <span class="button-loader" style="display: none">
+            <i class="fas fa-spinner fa-spin"></i>
+          </span>
+        </button>
+        <button class="button danger delete-draft">
+          <span class="button-text">Delete</span>
+          <span class="button-loader" style="display: none">
+            <i class="fas fa-spinner fa-spin"></i>
+          </span>
+        </button>
+      </div>
 
-  .draft-header h3 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin: 0;
-  }
-
-  .tweets-container {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .tweet-wrapper {
-    position: relative;
-  }
-
-  .tweet-edit {
-    width: 100%;
-    padding: 0.75rem;
-    border: 2px solid #e5e7eb;
-    border-radius: 0.5rem;
-    font-size: 1rem;
-    resize: vertical;
-    transition: all 0.2s ease;
-    min-height: 100px;
-  }
-
-  .tweet-edit:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-  }
-
-  /* Character count states */
-  .tweet-wrapper.within-limit .tweet-edit {
-    border-color: #2563eb;
-  }
-
-  .tweet-wrapper.near-limit .tweet-edit {
-    border-color: #f59e0b;
-  }
-
-  .tweet-wrapper.over-limit .tweet-edit {
-    border-color: #dc2626;
-  }
-
-  .character-count {
-    position: absolute;
-    bottom: 0.75rem;
-    right: 0.75rem;
-    font-size: 0.875rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    background: rgba(255, 255, 255, 0.9);
-    transition: all 0.2s ease;
-  }
-
-  .within-limit .character-count {
-    color: #2563eb;
-  }
-
-  .near-limit .character-count {
-    color: #f59e0b;
-  }
-
-  .over-limit .character-count {
-    color: #dc2626;
-  }
-
-  .draft-actions {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-  }
-
-  .button {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-
-  .button.primary {
-    background: #2563eb;
-    color: white;
-  }
-
-  .button.primary:hover {
-    background: #1d4ed8;
-  }
-
-  .button.secondary {
-    background: #4b5563;
-    color: white;
-  }
-
-  .button.secondary:hover {
-    background: #374151;
-  }
-
-  .button.danger {
-    background: #dc2626;
-    color: white;
-  }
-
-  .button.danger:hover {
-    background: #b91c1c;
-  }
-
-  .empty-state {
-    text-align: center;
-    padding: 3rem;
-    background: white;
-    border-radius: 1rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-
-  .empty-state p {
-    color: #6b7280;
-    font-size: 1rem;
-  }
-
-  @media (max-width: 640px) {
-    .draft-actions {
-      flex-direction: column;
-    }
-
-    .button {
-      width: 100%;
-    }
-  }
-
-  /* Toast Styles */
-  .toast {
-    position: fixed;
-    top: 1rem;
-    right: 1rem;
-    z-index: 1000;
-    visibility: hidden;
-    opacity: 0;
-    transform: translateY(-1rem);
-    transition: all 0.3s ease;
-  }
-
-  .toast.show {
-    visibility: visible;
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .toast-content {
-    display: flex;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    border-radius: 0.5rem;
-    background: white;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-      0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    min-width: 300px;
-  }
-
-  .toast.success .toast-content {
-    background: #10b981;
-    color: white;
-  }
-
-  .toast.error .toast-content {
-    background: #ef4444;
-    color: white;
-  }
-
-  .toast.warning .toast-content {
-    background: #f59e0b;
-    color: white;
-  }
-
-  .toast-message {
-    flex: 1;
-    margin-right: 1rem;
-    font-size: 0.875rem;
-  }
-
-  .toast-close {
-    background: none;
-    border: none;
-    color: currentColor;
-    cursor: pointer;
-    font-size: 1.25rem;
-    padding: 0;
-    opacity: 0.7;
-    transition: opacity 0.2s;
-  }
-
-  .toast-close:hover {
-    opacity: 1;
-  }
-
-  /* Add loading state for buttons */
-  .button.loading {
-    position: relative;
-    color: transparent !important;
-    pointer-events: none;
-  }
-
-  .button.loading::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 1.25em;
-    height: 1.25em;
-    border: 2px solid rgba(255, 255, 255, 0.5);
-    border-top-color: white;
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    animation: button-loading-spinner 0.6s linear infinite;
-  }
-
-  @keyframes button-loading-spinner {
-    from {
-      transform: translate(-50%, -50%) rotate(0turn);
-    }
-    to {
-      transform: translate(-50%, -50%) rotate(1turn);
-    }
-  }
-</style>
+      <div
+        class="draft-actions edit-actions"
+        id="edit-actions-{{ draft._id }}"
+        style="display: none"
+      >
+        <button
+          class="button primary save-edits"
+          onclick="saveEdits('{{ draft._id }}')"
+        >
+          <span class="button-text">Save</span>
+          <span class="button-loader" style="display: none">
+            <i class="fas fa-spinner fa-spin"></i>
+          </span>
+        </button>
+        <button
+          class="button secondary cancel-edit"
+          onclick="cancelEdit('{{ draft._id }}')"
+        >
+          <span class="button-text">Cancel</span>
+          <span class="button-loader" style="display: none">
+            <i class="fas fa-spinner fa-spin"></i>
+          </span>
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
 
 <script>
-  document.querySelectorAll(".tweet-edit").forEach((textarea) => {
-    const wrapper = textarea.closest(".tweet-wrapper");
-    const counter = wrapper.querySelector(".character-count span");
+  // Declare originalContent at the top of the script
+  const originalContent = {};
 
-    function updateCharacterCount() {
-      const length = textarea.value.length;
-      counter.textContent = length;
-
-      // Remove all state classes first
-      wrapper.classList.remove("within-limit", "near-limit", "over-limit");
-
-      // Add appropriate state class
-      if (length > 300) {
-        wrapper.classList.add("over-limit");
-      } else if (length > 280) {
-        wrapper.classList.add("near-limit");
-      } else if (length > 0) {
-        wrapper.classList.add("within-limit");
+  document
+    .getElementById("threadTypeFilter")
+    .addEventListener("change", async function () {
+      const filterType = this.value;
+      try {
+        const response = await fetch(`/get-drafts?type=${filterType}`);
+        if (response.ok) {
+          const drafts = await response.json();
+          updateDraftsDisplay(drafts);
+        } else {
+          throw new Error("Failed to fetch drafts");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        toast.show(error.message, "error");
       }
+    });
+
+  function updateDraftsDisplay(drafts) {
+    const draftsContent = document.querySelector(".drafts-content");
+    if (!drafts || drafts.length === 0) {
+      draftsContent.innerHTML = `
+            <div class="empty-state">
+                <p>No ${
+                  threadTypeFilter.value === "all"
+                    ? ""
+                    : threadTypeFilter.value + " "
+                }drafts found.</p>
+            </div>
+        `;
+      return;
     }
 
-    // Initial count
-    updateCharacterCount();
+    draftsContent.innerHTML = drafts
+      .map(
+        (draft) => `
+        <div class="draft-card ${
+          draft.is_reply ? "draft-reply" : ""
+        }" data-id="${draft._id}">
+            <div class="draft-header">
+                <h3>${draft.topic}</h3>
+                ${
+                  draft.is_reply
+                    ? '<span class="reply-badge">Reply Draft</span>'
+                    : ""
+                }
+            </div>
 
-    // Update on input
-    textarea.addEventListener("input", updateCharacterCount);
-  });
-</script>
+            ${
+              draft.is_reply && draft.original_post
+                ? `
+                <div class="original-post">
+                    <div class="original-author">@${draft.original_post.author}</div>
+                    <div class="original-text">${draft.original_post.text}</div>
+                    <div class="original-timestamp">${draft.original_post.timestamp}</div>
+                </div>
+            `
+                : ""
+            }
 
-<script>
-  // Toast notification system
-  class Toast {
-    constructor() {
-      this.toast = document.getElementById("toast");
-      this.message = this.toast.querySelector(".toast-message");
-      this.closeBtn = this.toast.querySelector(".toast-close");
-      this.timeout = null;
+            <div class="tweets-container" id="tweets-${draft._id}">
+                ${draft.tweets
+                  .map(
+                    (tweet) => `
+                    <div class="tweet-wrapper">
+                        <textarea class="tweet-edit" rows="4" maxlength="300" readonly>${tweet}</textarea>
+                        <div class="character-count" aria-live="polite"><span>${tweet.length}</span>/300</div>
+                    </div>
+                `
+                  )
+                  .join("")}
+            </div>
 
-      this.closeBtn.addEventListener("click", () => this.hide());
-    }
+            <div class="draft-actions normal-actions" id="normal-actions-${
+              draft._id
+            }">
+                <button class="button primary post-thread">
+                    <span class="button-text">Post ${
+                      draft.is_reply ? "Reply" : "Thread"
+                    }</span>
+                    <span class="button-loader" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </button>
+                <button class="button secondary edit-draft" onclick="toggleEditMode('${
+                  draft._id
+                }')">
+                    <span class="button-text">Edit <i class="fa-solid fa-pen"></i></span>
+                    <span class="button-loader" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </button>
+                <button class="button danger delete-draft">
+                    <span class="button-text">Delete</span>
+                    <span class="button-loader" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </button>
+            </div>
 
-    show(message, type = "success", duration = 3000) {
-      if (this.timeout) {
-        clearTimeout(this.timeout);
-      }
-      this.toast.classList.remove("success", "error", "warning");
-      this.message.textContent = message;
-      this.toast.classList.add(type, "show");
-      this.timeout = setTimeout(() => this.hide(), duration);
-    }
+            <div class="draft-actions edit-actions" id="edit-actions-${
+              draft._id
+            }" style="display: none;">
+                <button class="button primary save-edits" onclick="saveEdits('${
+                  draft._id
+                }')">
+                    <span class="button-text">Save</span>
+                    <span class="button-loader" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </button>
+                <button class="button secondary cancel-edit" onclick="cancelEdit('${
+                  draft._id
+                }')">
+                    <span class="button-text">Cancel</span>
+                    <span class="button-loader" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </button>
+            </div>
+        </div>
+    `
+      )
+      .join("");
 
-    hide() {
-      this.toast.classList.remove("show");
-      setTimeout(() => {
-        this.toast.classList.remove("success", "error", "warning");
-      }, 300);
-    }
+    attachDraftEventListeners();
   }
 
-  const toast = new Toast();
+  function attachDraftEventListeners() {
+    // Character count functionality
+    document.querySelectorAll(".tweet-edit").forEach((textarea) => {
+      const wrapper = textarea.closest(".tweet-wrapper");
+      const counter = wrapper.querySelector(".character-count span");
 
-  // Save edits functionality
-  document.querySelectorAll(".save-edits").forEach((button) => {
-    button.addEventListener("click", async function (e) {
-      e.preventDefault();
-      const draftCard = this.closest(".draft-card");
-      const draftId = draftCard.dataset.id;
-      const tweets = Array.from(draftCard.querySelectorAll(".tweet-edit")).map(
-        (textarea) => textarea.value
+      function updateCharacterCount() {
+        const length = textarea.value.length;
+        counter.textContent = length;
+      }
+
+      updateCharacterCount();
+      textarea.addEventListener("input", updateCharacterCount);
+    });
+
+    // Post thread functionality
+    document.querySelectorAll(".post-thread").forEach((button) => {
+      button.addEventListener("click", async function () {
+        setButtonLoading(this, true);
+        try {
+          const draftId = this.closest(".draft-card").dataset.id;
+          const response = await fetch(`/post-draft/${draftId}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          if (response.ok) {
+            showToast("Thread posted successfully", "success");
+            // Remove the draft card from the UI
+            this.closest(".draft-card").remove();
+          } else {
+            throw new Error("Failed to post thread");
+          }
+        } catch (error) {
+          showToast(error.message, "error");
+          setButtonLoading(this, false);
+        }
+      });
+    });
+
+    // Delete draft functionality
+    document.querySelectorAll(".delete-draft").forEach((button) => {
+      button.addEventListener("click", async function () {
+        if (confirm("Are you sure you want to delete this draft?")) {
+          setButtonLoading(this, true);
+          try {
+            const draftId = this.closest(".draft-card").dataset.id;
+            const response = await fetch(`/delete-draft/${draftId}`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            });
+
+            if (response.ok) {
+              showToast("Draft deleted successfully", "success");
+              // Remove the draft card from the UI
+              this.closest(".draft-card").remove();
+            } else {
+              throw new Error("Failed to delete draft");
+            }
+          } catch (error) {
+            showToast(error.message, "error");
+            setButtonLoading(this, false);
+          }
+        }
+      });
+    });
+
+    document.querySelectorAll(".save-edits").forEach((button) => {
+      button.addEventListener("click", handleSaveEdits);
+    });
+
+    document.querySelectorAll(".edit-draft").forEach((button) => {
+      button.addEventListener("click", function () {
+        const draftId = this.dataset.id;
+        const draftCard = this.closest(".draft-card");
+        const normalActions = document.getElementById(
+          `normal-actions-${draftId}`
+        );
+        const editActions = document.getElementById(`edit-actions-${draftId}`);
+        const textareas = draftCard.querySelectorAll(".tweet-edit");
+
+        textareas.forEach((textarea) => (textarea.disabled = false));
+        normalActions.style.display = "none";
+        editActions.style.display = "flex";
+      });
+    });
+
+    document.querySelectorAll(".cancel-edit").forEach((button) => {
+      button.addEventListener("click", function () {
+        const draftId = this.dataset.id;
+        const draftCard = this.closest(".draft-card");
+        const normalActions = document.getElementById(
+          `normal-actions-${draftId}`
+        );
+        const editActions = document.getElementById(`edit-actions-${draftId}`);
+        const textareas = draftCard.querySelectorAll(".tweet-edit");
+
+        textareas.forEach((textarea) => (textarea.disabled = true));
+        editActions.style.display = "none";
+        normalActions.style.display = "flex";
+      });
+    });
+  }
+
+  attachDraftEventListeners();
+
+  // Toggle edit mode
+  function toggleEditMode(draftId) {
+    console.log("Toggling edit mode for draft:", draftId);
+    const draftCard = document.querySelector(
+      `.draft-card[data-id="${draftId}"]`
+    );
+    const normalActions = document.getElementById(`normal-actions-${draftId}`);
+    const editActions = document.getElementById(`edit-actions-${draftId}`);
+    const textareas = draftCard.querySelectorAll(".tweet-edit");
+
+    // Store original content if not already stored
+    if (!originalContent[draftId]) {
+      originalContent[draftId] = Array.from(textareas).map((t) => t.value);
+    }
+
+    // Enable textareas and show edit mode buttons
+    textareas.forEach((textarea) => {
+      textarea.readOnly = false;
+      textarea.style.backgroundColor = "white";
+    });
+    normalActions.style.display = "none";
+    editActions.style.display = "flex";
+  }
+
+  // Save edits
+  async function saveEdits(draftId) {
+    const saveButton = document.querySelector(
+      `#edit-actions-${draftId} .save-edits`
+    );
+    setButtonLoading(saveButton, true);
+
+    try {
+      const draftCard = document.querySelector(
+        `.draft-card[data-id="${draftId}"]`
       );
+      const textareas = draftCard.querySelectorAll(".tweet-edit");
+      const tweets = Array.from(textareas).map((t) => t.value);
 
-      // Add loading state
-      this.classList.add("loading");
+      const response = await fetch(`/update-draft/${draftId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ tweets: tweets }),
+      });
 
-      try {
-        const response = await fetch(`/update-draft/${draftId}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tweets }),
-          credentials: "same-origin",
-        });
-
-        if (response.ok) {
-          toast.show("Draft saved successfully!", "success");
-        } else {
-          const error = await response.json();
-          throw new Error(error.detail || "Failed to save draft");
-        }
-      } catch (error) {
-        console.error("Error updating draft:", error);
-        toast.show(error.message, "error");
-      } finally {
-        this.classList.remove("loading");
+      if (response.ok) {
+        // Update original content
+        originalContent[draftId] = tweets;
+        exitEditMode(draftId);
+        showToast("Draft updated successfully", "success");
+      } else {
+        throw new Error("Failed to update draft");
       }
+    } catch (error) {
+      showToast(error.message, "error");
+    } finally {
+      setButtonLoading(saveButton, false);
+    }
+  }
+
+  // Cancel edit
+  function cancelEdit(draftId) {
+    const draftCard = document.querySelector(
+      `.draft-card[data-id="${draftId}"]`
+    );
+    const textareas = draftCard.querySelectorAll(".tweet-edit");
+
+    // Restore original content
+    if (originalContent[draftId]) {
+      textareas.forEach((textarea, index) => {
+        textarea.value = originalContent[draftId][index];
+      });
+    }
+
+    exitEditMode(draftId);
+  }
+
+  // Helper function to exit edit mode
+  function exitEditMode(draftId) {
+    const draftCard = document.querySelector(
+      `.draft-card[data-id="${draftId}"]`
+    );
+    const normalActions = document.getElementById(`normal-actions-${draftId}`);
+    const editActions = document.getElementById(`edit-actions-${draftId}`);
+    const textareas = draftCard.querySelectorAll(".tweet-edit");
+
+    // Disable textareas and restore normal mode
+    textareas.forEach((textarea) => {
+      textarea.readOnly = true;
+      textarea.style.backgroundColor = "#f9fafb";
+    });
+    editActions.style.display = "none";
+    normalActions.style.display = "flex";
+  }
+
+  // Update character count for all textareas
+  document.querySelectorAll(".tweet-edit").forEach((textarea) => {
+    textarea.addEventListener("input", function () {
+      const counter = this.nextElementSibling.querySelector("span");
+      counter.textContent = this.value.length;
     });
   });
 
-  // Delete draft functionality
-  document.querySelectorAll(".delete-draft").forEach((button) => {
-    button.addEventListener("click", async function (e) {
-      e.preventDefault();
-      if (!confirm("Are you sure you want to delete this draft?")) return;
+  // Toast functionality (if not defined elsewhere)
+  function showToast(message, type = "success") {
+    const toast = document.getElementById("toast");
+    const toastMessage = toast.querySelector(".toast-message");
 
-      const draftCard = this.closest(".draft-card");
-      const draftId = draftCard.dataset.id;
+    toastMessage.textContent = message;
+    toast.className = `toast ${type}`;
+    toast.style.display = "block";
 
-      this.classList.add("loading");
+    setTimeout(() => {
+      toast.style.display = "none";
+    }, 3000);
+  }
 
-      try {
-        const response = await fetch(`/delete-draft/${draftId}`, {
-          method: "POST",
-          credentials: "same-origin",
-        });
+  // Add this helper function
+  function setButtonLoading(button, isLoading) {
+    const textSpan = button.querySelector(".button-text");
+    const loaderSpan = button.querySelector(".button-loader");
+    button.disabled = isLoading;
 
-        if (response.ok) {
-          toast.show("Draft deleted successfully", "success");
-          draftCard.remove();
-        } else {
-          const error = await response.json();
-          throw new Error(error.detail || "Failed to delete draft");
-        }
-      } catch (error) {
-        console.error("Error deleting draft:", error);
-        toast.show(error.message, "error");
-        this.classList.remove("loading");
-      }
-    });
-  });
-
-  // Post thread functionality
-  document.querySelectorAll(".post-thread").forEach((button) => {
-    button.addEventListener("click", async function (e) {
-      e.preventDefault();
-      if (!confirm("Are you sure you want to post this thread to Bluesky?"))
-        return;
-
-      const draftCard = this.closest(".draft-card");
-      const draftId = draftCard.dataset.id;
-
-      this.classList.add("loading");
-
-      try {
-        const response = await fetch(`/post-draft/${draftId}`, {
-          method: "POST",
-          credentials: "same-origin",
-        });
-
-        if (response.ok) {
-          toast.show("Thread posted successfully!", "success");
-          draftCard.remove();
-        } else {
-          const error = await response.json();
-          throw new Error(error.detail || "Failed to post thread");
-        }
-      } catch (error) {
-        console.error("Error posting thread:", error);
-        toast.show(error.message, "error");
-      } finally {
-        this.classList.remove("loading");
-      }
-    });
-  });
+    if (isLoading) {
+      textSpan.style.opacity = "0";
+      loaderSpan.style.display = "flex";
+    } else {
+      textSpan.style.opacity = "1";
+      loaderSpan.style.display = "none";
+    }
+  }
 </script>
 {% endblock %}
