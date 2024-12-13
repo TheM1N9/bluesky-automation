@@ -16,6 +16,7 @@ from googleapiclient.discovery import build
 import pickle
 import base64
 from database import Database  # Add at top of file
+import sys
 
 
 class BlueskyBot:
@@ -45,13 +46,13 @@ class BlueskyBot:
 
         self.start_time = datetime.now(timezone.utc)
 
-        # Set up logging
+        # Set up logging with UTF-8 encoding
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(levelname)s - %(message)s",
             handlers=[
-                logging.FileHandler("bluesky_bot.log"),
-                logging.StreamHandler(),
+                logging.FileHandler("bluesky_bot.log", encoding="utf-8"),
+                logging.StreamHandler(sys.stdout),
             ],
         )
         self.logger = logging.getLogger(__name__)
@@ -351,21 +352,19 @@ class BlueskyBot:
 
     async def run(self):
         """Main bot loop"""
-        print("\n=== Starting Bluesky Newsletter Bot ===")
-
-        # Authenticate with both services
-        self.authenticate_gmail()
-        if not await self.login_to_bluesky():
-            return
+        self.logger.info(f"\n=== Starting Bluesky Bot for {self.user_email} ===")
 
         try:
-            # Start monitoring Gmail
-            await self.monitor_gmail()
-        except KeyboardInterrupt:
-            print("\nBot stopped by user")
+            # Authenticate with both services
+            self.authenticate_gmail()
+            if not await self.login_to_bluesky():
+                return
+
+            # Run Gmail monitoring and mention handling concurrently
+            await asyncio.gather(self.monitor_gmail(), self.monitor_mentions())
         except Exception as e:
-            print(f"Error in main loop: {e}")
-            await asyncio.sleep(10)
+            self.logger.error(f"Critical error in bot main loop: {e}")
+            raise  # Re-raise to trigger BotManager error handling
 
     def analyze_email_type(self, model, email_data, user_topics: List[str]):
         """Analyze if an email is a newsletter and filter topics based on user preferences"""
@@ -489,7 +488,12 @@ class BlueskyBot:
             - Complete thoughts within each tweet
             - The post should not look like a spam post or a bot post
             - Only speak about the topic in the tweets
-            - Narrate the tweets like a story
+            - Narrate the tweets like a story, there should be a consistent narrative and flow
+            - Use a conversational tone, concise language and avoid unnecessarily complex jargon.
+            - Use simple language. 10th grade readability or lower. Example: "Emails help businesses tell customers about their stuff."
+            - Use rhetorical fragments to improve readability. Example: "The good news? My 3-step process can be applied to any business"   
+            - Use analogies or examples often. Example: "Creating an email course with Al is easier than stealing candies from a baby"
+            - Include personal anecdotes. Example: "I recently asked ChatGPT to write me..."
             - Separate tweets with [TWEET]
 
             You should focus on being concise yet informative.
@@ -503,7 +507,7 @@ class BlueskyBot:
             for post in posts:
                 clean_post = post.strip()
                 if clean_post:
-                    clean_post = re.sub(r"\*\*|\[|\]|\(\)|\{\}|#", "", clean_post)
+                    clean_post = re.sub(r"\*\*|\[|\]|\(\)|\{\}", "", clean_post)
                     if len(clean_post) <= 300:
                         valid_posts.append(clean_post)
                     else:
@@ -523,6 +527,180 @@ class BlueskyBot:
             self.logger.error(f"Error creating topic thread: {e}")
             return []
 
+    async def handle_mentions(self):
+        """Monitor and reply to mentions using search endpoint"""
+        try:
+            if not self.client.me:
+                await self.login_to_bluesky()
+
+            self.logger.info(f"Checking mentions for {self.BLUESKY_USERNAME}")
+
+            mentions = self.client.app.bsky.feed.search_posts(
+                {"q": f"mentions:{self.BLUESKY_USERNAME}", "limit": 20}
+            )
+
+            if not mentions or not mentions.posts:
+                self.logger.info("No mentions found")
+                return
+
+            self.logger.info(f"Found {len(mentions.posts)} mentions")
+
+            for post in mentions.posts:
+                try:
+                    self.logger.info(f"Processing mention CID: {post.cid}")
+
+                    # Check if already processed
+                    is_processed = await self.db.is_mention_processed(
+                        self.user_email, post.cid
+                    )
+                    self.logger.info(f"Is mention already processed? {is_processed}")
+
+                    if is_processed:
+                        continue
+
+                    # Get the full post data
+                    post_data = self.client.com.atproto.repo.get_record(
+                        {
+                            "repo": post.author.did,
+                            "collection": "app.bsky.feed.post",
+                            "rkey": post.uri.split("/")[-1],
+                        }
+                    )
+
+                    # Convert post_data.value to string and extract text using regex
+                    post_value_str = str(post_data.value)
+                    text_match = re.search(r"text='([^']*)'", post_value_str)
+                    post_text = text_match.group(1) if text_match else ""
+
+                    # Ensure text is properly encoded
+                    post_text = post_text.encode("utf-8").decode("utf-8")
+
+                    self.logger.info(f"Extracted post text: {post_text}")
+
+                    reply = await self.generate_contextual_reply(post_text)
+                    self.logger.info(f"Generated reply: {reply}")
+
+                    if reply:
+                        text = f"@{post.author.handle} {reply}"
+                        self.logger.info(f"Posting reply: {text}")
+
+                        response = self.client.send_post(
+                            text=text,
+                            reply_to={
+                                "root": {"uri": post.uri, "cid": post.cid},
+                                "parent": {"uri": post.uri, "cid": post.cid},
+                            },
+                        )
+
+                        if response:
+                            # Create a simplified mention data structure
+                            mention_data = {
+                                "cid": post.cid,
+                                "author_handle": post.author.handle,
+                                "author_did": post.author.did,
+                                "text": post_text,  # Using the extracted and encoded text
+                                "reply": text,
+                                "reply_timestamp": datetime.now(
+                                    timezone.utc
+                                ).isoformat(),
+                                "timestamp": datetime.now(timezone.utc).isoformat(),
+                            }
+
+                            await self.db.add_processed_mention(
+                                self.user_email, mention_data
+                            )
+                            self.logger.info(
+                                f"Successfully replied to {post.author.handle}"
+                            )
+
+                    await asyncio.sleep(2)
+
+                except Exception as e:
+                    self.logger.error(f"Error processing mention {post.cid}: {str(e)}")
+                    continue
+
+        except Exception as e:
+            self.logger.error(f"Error in mention handling: {str(e)}")
+            raise
+
+    async def generate_contextual_reply(self, mention_text: str) -> str:
+        """Generate a contextual reply based on user's writing style"""
+        # try:
+        # Get user's writing style
+        user = await self.db.get_user(self.user_email)
+        if not user:
+            raise Exception("User not found")
+
+        # Default styles if user or writing style not found
+        DEFAULT_THINKING_STYLE = """
+        Analytical and Research-Oriented: The writer examines topics critically, using data and evidence to build arguments.
+        Cause-and-Effect Reasoning: They explore how specific actions lead to broader consequences.
+        """
+
+        DEFAULT_NARRATIVE_STYLE = """
+        Engaging and Accessible: The writer uses conversational language to appeal to a broad audience.
+        Descriptive and Vivid: They paint mental pictures with detailed imagery to make their points relatable.
+        """
+
+        # Use default styles if user or writing_style not found
+        writing_style = user.get("writing_style", {}) if user else {}
+        thinking_style = writing_style.get("thinking_style", DEFAULT_THINKING_STYLE)
+        narrative_style = writing_style.get("narrative_style", DEFAULT_NARRATIVE_STYLE)
+
+        prompt = f"""
+        Generate a natural reply to this mention: "{mention_text}"
+
+        Use this thinking style:
+        {thinking_style}
+
+        Use this narrative style:
+        {narrative_style}
+
+        Requirements:
+        - Must be under 300 characters
+        - Be conversational and natural
+        - Don't use hashtags
+        - Don't use markdown formatting
+        - Use at most one emoji if appropriate
+        - Respond contextually to the mention
+        """
+
+        response = self.model.generate_content(prompt)
+        if not response or not response.text:
+            self.logger.error("Empty response from model")
+            return "I apologize, but I'm unable to process your message at the moment. Please try again later."
+
+        reply = response.text.strip()
+        self.logger.info(f"Raw model response: {reply}")
+
+        # Clean and validate reply
+        reply = re.sub(r"\*\*|\[|\]|\(\)|\{\}", "", reply)
+        if len(reply) > 300:
+            reply = reply[:297] + "..."
+
+        return reply
+
+        # except Exception as e:
+        #     self.logger.error(f"Error generating reply: {e}")
+        #     return ""
+
+    async def monitor_mentions(self):
+        """Continuously monitor mentions using search endpoint"""
+        self.logger.info(f"Starting mention monitoring for user {self.user_email}")
+
+        while True:
+            try:
+                await self.handle_mentions()  # This now uses search_posts
+
+                # Wait before next check
+                await asyncio.sleep(60)
+
+            except Exception as e:
+                self.logger.error(
+                    f"Error in mention monitoring for {self.user_email}: {e}"
+                )
+                await asyncio.sleep(120)  # Longer wait on error
+
 
 async def main():
     # Load environment variables
@@ -541,4 +719,6 @@ async def main():
 
 
 if __name__ == "__main__":
+    asyncio.run(main())
+
     asyncio.run(main())

@@ -60,3 +60,9 @@ class DraftThread(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ProcessedMention(BaseModel):
+    user_email: EmailStr
+    mention_id: str
+    processed_at: datetime = datetime.utcnow()

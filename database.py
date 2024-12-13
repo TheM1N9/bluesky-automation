@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from passlib.context import CryptContext
 import os
 from dotenv import load_dotenv
+import logging
 from typing import List, Optional
 from bson import ObjectId
 from models import UserCreate, UserOnboarding
@@ -15,6 +16,9 @@ MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
 class Database:
     client: AsyncIOMotorClient
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
 
     async def connect_db(self):
         self.client = AsyncIOMotorClient(MONGO_URL)
@@ -167,6 +171,50 @@ class Database:
 
     async def delete_user(self, email: str):
         await self.client.newsletter_bot.users.delete_one({"email": email})
+
+    async def add_processed_mention(self, user_email: str, mention_data: dict):
+        """Store a processed mention with simplified metadata"""
+        try:
+            mention_record = {
+                "user_email": user_email,
+                "mention_id": mention_data["cid"],
+                "author_handle": mention_data["author_handle"],
+                "author_did": mention_data["author_did"],
+                "text": mention_data["text"],  # Now contains properly encoded text
+                "reply": mention_data["reply"],
+                "reply_timestamp": mention_data["reply_timestamp"],
+                "timestamp": mention_data["timestamp"],
+                "processed_at": datetime.utcnow(),
+            }
+
+            result = await self.client.newsletter_bot.processed_mentions.insert_one(
+                mention_record
+            )
+
+            self.logger.info(f"Stored processed mention with ID: {result.inserted_id}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error storing processed mention: {e}")
+            return False
+
+    async def is_mention_processed(self, user_email: str, mention_id: str) -> bool:
+        """Check if a mention has been processed"""
+        try:
+            result = await self.client.newsletter_bot.processed_mentions.find_one(
+                {"user_email": user_email, "mention_id": mention_id}
+            )
+            logging.info(f"Database check for processed mention: {result}")
+            return bool(result)
+        except Exception as e:
+            logging.error(f"Database error checking processed mention: {e}")
+            return False
+
+    async def cleanup_old_processed_mentions(self, days_old: int = 30):
+        """Clean up processed mention records older than specified days"""
+        cutoff_date = datetime.utcnow() - timedelta(days=days_old)
+        await self.client.newsletter_bot.processed_mentions.delete_many(
+            {"processed_at": {"$lt": cutoff_date}}
+        )
 
 
 db = Database()
