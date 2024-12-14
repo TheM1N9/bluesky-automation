@@ -585,10 +585,10 @@ class BlueskyBot:
 
                     if self.auto_reply:
                         # Post reply if auto-reply is enabled
-                        text = f"@{post.author.handle} {reply}"
+                        # text = f"@{post.author.handle} {reply}"
                         response = self.client.send_post(
-                            text=text,
-                            reply_to={
+                            text=reply,
+                            reply_to={  # type: ignore
                                 "root": {"uri": post.uri, "cid": post.cid},
                                 "parent": {"uri": post.uri, "cid": post.cid},
                             },
