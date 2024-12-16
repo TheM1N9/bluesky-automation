@@ -18,6 +18,12 @@
         <option value="newsletter">Newsletter Threads</option>
         <option value="reply">Reply Threads</option>
       </select>
+
+      <select id="sortFilter" class="thread-filter">
+        <option value="newest">Newest First</option>
+        <option value="oldest">Oldest First</option>
+        <option value="topic">Sort by Topic</option>
+      </select>
     </div>
   </div>
 
@@ -139,6 +145,8 @@
 
   function updateDraftsDisplay(drafts) {
     const draftsContent = document.querySelector(".drafts-content");
+    const sortFilter = document.getElementById("sortFilter");
+
     if (!drafts || drafts.length === 0) {
       draftsContent.innerHTML = `
             <div class="empty-state">
@@ -151,6 +159,20 @@
         `;
       return;
     }
+
+    // Sort drafts based on selected option
+    drafts.sort((a, b) => {
+      switch (sortFilter.value) {
+        case "newest":
+          return new Date(b.created_at) - new Date(a.created_at);
+        case "oldest":
+          return new Date(a.created_at) - new Date(b.created_at);
+        case "topic":
+          return a.topic.localeCompare(b.topic);
+        default:
+          return 0;
+      }
+    });
 
     draftsContent.innerHTML = drafts
       .map(
@@ -487,6 +509,59 @@
     } else {
       textSpan.style.opacity = "1";
       loaderSpan.style.display = "none";
+    }
+  }
+
+  // Add event listener for sort filter
+  document
+    .getElementById("sortFilter")
+    .addEventListener("change", async function () {
+      const filterType = document.getElementById("threadTypeFilter").value;
+      try {
+        const response = await fetch(`/get-drafts?type=${filterType}`);
+        if (response.ok) {
+          const drafts = await response.json();
+          updateDraftsDisplay(drafts);
+        } else {
+          throw new Error("Failed to fetch drafts");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        toast.show(error.message, "error");
+      }
+    });
+
+  async function handleSaveEdits(event) {
+    const button = event.currentTarget;
+    const draftCard = button.closest(".draft-card");
+    const draftId = draftCard.dataset.id;
+
+    setButtonLoading(button, true);
+
+    try {
+      const textareas = draftCard.querySelectorAll(".tweet-edit");
+      const tweets = Array.from(textareas).map((t) => t.value);
+
+      const response = await fetch(`/update-draft/${draftId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ tweets: tweets }),
+      });
+
+      if (response.ok) {
+        // Update original content
+        originalContent[draftId] = tweets;
+        exitEditMode(draftId);
+        showToast("Draft updated successfully", "success");
+      } else {
+        throw new Error("Failed to update draft");
+      }
+    } catch (error) {
+      showToast(error.message, "error");
+    } finally {
+      setButtonLoading(button, false);
     }
   }
 </script>

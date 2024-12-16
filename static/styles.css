@@ -679,4 +679,19 @@ nav {
 
 .fa-spin {
     animation: spin 1s linear infinite;
+}
+
+.toast.success .toast-content {
+    background: #10b981;
+    border-left: 4px solid #059669;
+}
+
+.toast.error .toast-content {
+    background: #ef4444;
+    border-left: 4px solid #dc2626;
+}
+
+.toast.warning .toast-content {
+    background: #f59e0b;
+    border-left: 4px solid #d97706;
 } 
