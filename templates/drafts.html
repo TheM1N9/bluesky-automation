@@ -160,19 +160,22 @@
       return;
     }
 
-    // Sort drafts based on selected option
-    drafts.sort((a, b) => {
-      switch (sortFilter.value) {
-        case "newest":
-          return new Date(b.created_at) - new Date(a.created_at);
-        case "oldest":
-          return new Date(a.created_at) - new Date(b.created_at);
-        case "topic":
-          return a.topic.localeCompare(b.topic);
-        default:
-          return 0;
-      }
-    });
+    // Always sort by newest first initially
+    drafts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    // Then apply any selected sort
+    if (sortFilter.value !== "newest") {
+      drafts.sort((a, b) => {
+        switch (sortFilter.value) {
+          case "oldest":
+            return new Date(a.created_at) - new Date(b.created_at);
+          case "topic":
+            return a.topic.localeCompare(b.topic);
+          default:
+            return 0;
+        }
+      });
+    }
 
     draftsContent.innerHTML = drafts
       .map(
