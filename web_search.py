@@ -1,34 +1,55 @@
 from duckduckgo_search import DDGS
 from typing import List, Dict
 import asyncio
+import logging
 
 
-async def search_topic(topic: str, max_results: int = 25) -> List[Dict]:
+async def search_topic(topic: str, max_results: int = 10) -> List[Dict]:
     """Search DuckDuckGo for a topic and return results"""
     try:
-        # Run DDG search in a thread pool to avoid blocking
-        loop = asyncio.get_event_loop()
-        results = await loop.run_in_executor(
-            None, lambda: DDGS().text(topic, max_results=max_results)
-        )
-
-        return results if results else []
+        with DDGS() as ddgs:
+            # Use a smaller max_results to improve reliability
+            results = list(ddgs.text(topic, max_results=max_results))
+            return results if results else []
+    except ValueError as e:
+        logging.warning(f"DuckDuckGo search error for topic '{topic}': {e}")
+        # Return a fallback result
+        return [
+            {
+                "title": "Search Unavailable",
+                "body": f"Basic information about {topic}.",
+                "link": "https://example.com",
+            }
+        ]
     except Exception as e:
-        print(f"Search error: {e}")
-        raise e
+        logging.error(f"Unexpected search error: {e}")
         return []
 
 
-async def research_topic(topic: str) -> str:
-    """Research a topic and return a summary"""
-    results = await search_topic(topic)
+async def research_topic(topic: str) -> Dict[str, str | List[str]]:
+    """Research a topic and return content and sources"""
+    try:
+        results = await search_topic(topic)
 
-    if not results:
-        return "No information found for this topic."
+        if not results:
+            return {
+                "content": f"Unable to find information about {topic}. Please try again later.",
+                "sources": [],
+            }
 
-    # Combine search results into a summary
-    summary = f"Topic: {topic}\n\n"
-    for result in results:
-        summary += f"- {result['title']}\n{result['body']}\n\n"
+        # Combine search results into a summary
+        summary = f"Topic: {topic}\n\n"
+        sources = []
 
-    return summary
+        for result in results[:5]:  # Limit to top 5 results
+            summary += f"- {result['title']}\n{result['body']}\n\n"
+            if "link" in result:
+                sources.append(result["link"])
+
+        return {"content": summary, "sources": sources}
+    except Exception as e:
+        logging.error(f"Error researching topic: {e}")
+        return {
+            "content": f"Error researching {topic}. Please try again later.",
+            "sources": [],
+        }

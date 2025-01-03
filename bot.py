@@ -5,7 +5,7 @@ import random
 import re
 import google.generativeai as genai
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import email.utils
 from datetime import datetime, timezone, timedelta
 import json
@@ -17,6 +17,7 @@ import pickle
 import base64
 from database import Database  # Add at top of file
 import sys
+from web_search import research_topic
 
 
 class BlueskyBot:
@@ -71,7 +72,12 @@ class BlueskyBot:
 
     async def initialize(self):
         """Async initialization"""
+        # Initialize database connection
         await self.db.connect_db()
+
+        # Initialize Gemini model
+        self.model = self.setup_gemini()
+
         return self
 
     def authenticate_gmail(self):
@@ -188,9 +194,7 @@ class BlueskyBot:
                 or analysis["type"] != "NEWSLETTER"
                 or not analysis["is_relevant"]
             ):
-                self.logger.info(
-                    "Newsletter analysis: not relevant or not a newsletter"
-                )
+                self.logger.info("Newsletter analysis: not relevant")
                 return False
 
             for topic in analysis["matching_topics"]:
@@ -213,7 +217,16 @@ class BlueskyBot:
                     else:
                         self.logger.info("Auto-post is disabled, saving as draft")
                         await self.db.save_draft_thread(
-                            user_email=self.user_email, topic=topic, tweets=tweets
+                            user_email=self.user_email,
+                            topic=topic,
+                            tweets=tweets,
+                            source={
+                                "type": "email",
+                                "subject": email_data["subject"],
+                                "sender": email_data["sender"],
+                                "date": email_data["date"],
+                                "content": email_data["content"],
+                            },
                         )
                         self.logger.info(f"Saved draft for topic {topic}")
 
@@ -435,96 +448,51 @@ class BlueskyBot:
                 "is_relevant": False,
             }
 
-    async def create_topic_thread(self, topic: str, content: str) -> List[str]:
-        """Create a thread focusing on a specific topic from the newsletter content"""
+    async def create_topic_thread(
+        self,
+        topic: str,
+        content: str | List[str] = "",
+        email_data: Optional[Dict] = None,
+    ):
+        """Create a thread about a topic, either from provided content or web search"""
         try:
-            # Get user's writing style
-            user = await self.db.get_user(self.user_email)
-            if not user:
-                raise Exception("User not found")
+            # Ensure database is connected
+            if not hasattr(self.db, "client"):
+                await self.db.connect_db()
 
-            writing_style = user.get("writing_style", {})
+            # If content is not provided, do web search
+            if not content:
+                search_results = await research_topic(topic)
+                content = search_results["content"]
+                sources = search_results["sources"]
 
-            # Default styles if not set
-            DEFAULT_THINKING_STYLE = """
-            Analytical and Research-Oriented: The writer examines topics critically, using data, historical context, and evidence to build arguments.
-            Cause-and-Effect Reasoning: They explore how specific actions or methods lead to broader consequences.
-            Skeptical and Insightful: They question motivations and outcomes, highlighting both the implications and the hidden strategies behind processes or phenomena.
-            """
-
-            DEFAULT_NARRATIVE_STYLE = """
-            Engaging and Accessible: The writer uses conversational language to appeal to a broad audience.
-            Descriptive and Vivid: They paint mental pictures with detailed imagery and anecdotes to make their points relatable and impactful.
-            Emotionally Provocative: Language is charged to evoke curiosity or concern, making the topic feel urgent and relevant.
-            Balanced Pacing: Quick transitions and comparisons maintain attention, mirroring the dynamic nature of the subject.
-            Uses conversational language to maintain accessibility and engagement
-            """
-
-            thinking_style = writing_style.get("thinking_style", DEFAULT_THINKING_STYLE)
-            narrative_style = writing_style.get(
-                "narrative_style", DEFAULT_NARRATIVE_STYLE
-            )
-
-            chat = self.model.start_chat(history=[])
-            prompt = f"""
-            Create a engaging Twitter thread about: {topic}
-
-            Context for the thread: {content}
-
-            You are posting on behalf of human user. You are a human.
-            You will be given his thinking style and narrative style.
-            You should use this style to write the tweets.
-
-            Use this thinking style:
-            {thinking_style}
-
-            Use this narrative style:
-            {narrative_style}
-
-            Requirements:
-            - Each tweet MUST be under 300 characters (strict limit)
-            - First tweet should hook readers
-            - Use emojis sparingly (1-2 per tweet)
-            - Do not use markdown or formatting
-            - No URLs or placeholder links
-            - Complete thoughts within each tweet
-            - The post should not look like a spam post or a bot post
-            - Only speak about the topic in the tweets
-            - Narrate the tweets like a story, there should be a consistent narrative and flow
-            - Use a conversational tone, concise language and avoid unnecessarily complex jargon.
-            - Use simple language. 10th grade readability or lower. Example: "Emails help businesses tell customers about their stuff."
-            - Use rhetorical fragments to improve readability. Example: "The good news? My 3-step process can be applied to any business"   
-            - Use analogies or examples often. Example: "Creating an email course with Al is easier than stealing candies from a baby"
-            - Include personal anecdotes. Example: "I recently asked ChatGPT to write me..."
-            - Separate tweets with [TWEET]
-
-            You should focus on being concise yet informative.
-            """
-
-            response = chat.send_message(prompt)
-            posts = response.text.split("[TWEET]")
-
-            # Clean and validate posts
-            valid_posts = []
-            for post in posts:
-                clean_post = post.strip()
-                if clean_post:
-                    clean_post = re.sub(r"\*\*|\[|\]|\(\)|\{\}", "", clean_post)
-                    if len(clean_post) <= 300:
-                        valid_posts.append(clean_post)
-                    else:
-                        # Split long posts
-                        while clean_post and len(clean_post) > 300:
-                            split_index = clean_post.rfind(". ", 0, 297)
-                            if split_index == -1:
-                                split_index = 297
-                            valid_posts.append(clean_post[:split_index] + "...")
-                            clean_post = clean_post[split_index:].strip()
-                        if clean_post:
-                            valid_posts.append(clean_post)
-
-            return valid_posts
-
+                tweets = await self.generate_thread_content(content)
+                await self.db.save_draft_thread(
+                    user_email=self.user_email,
+                    topic=topic,
+                    tweets=tweets,
+                    source={"type": "web_search", "urls": sources},
+                )
+                return tweets
+            else:
+                tweets = await self.generate_thread_content(content)
+                await self.db.save_draft_thread(
+                    user_email=self.user_email,
+                    topic=topic,
+                    tweets=tweets,
+                    source=(
+                        {
+                            "type": "email",
+                            "subject": email_data["subject"] if email_data else None,
+                            "sender": email_data["sender"] if email_data else None,
+                            "date": email_data["date"] if email_data else None,
+                            "content": content,
+                        }
+                        if email_data
+                        else None
+                    ),
+                )
+                return tweets
         except Exception as e:
             self.logger.error(f"Error creating topic thread: {e}")
             return []
@@ -701,6 +669,35 @@ class BlueskyBot:
                     f"Error in mention monitoring for {self.user_email}: {e}"
                 )
                 await asyncio.sleep(120)  # Longer wait on error
+
+    async def generate_thread_content(self, content: str | List[str]) -> List[str]:
+        """Generate a thread of tweets from content"""
+        try:
+            prompt = f"""
+            Create a thread of posts from this content:
+            {content}
+
+            Requirements:
+            - Each post must be under 300 characters
+            - Make it engaging and informative
+            - Use natural language
+            - Don't use hashtags
+            - Don't use markdown formatting
+            """
+
+            response = self.model.generate_content(prompt)
+            if not response.text:
+                return []
+
+            # Split into individual tweets and clean them
+            tweets = [
+                tweet.strip() for tweet in response.text.split("\n") if tweet.strip()
+            ]
+            return [tweet for tweet in tweets if len(tweet) <= 300]
+
+        except Exception as e:
+            self.logger.error(f"Error generating thread content: {e}")
+            return []
 
 
 async def main():

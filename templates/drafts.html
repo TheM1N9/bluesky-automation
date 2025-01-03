@@ -37,15 +37,51 @@
         <h3>{{ draft.topic }}</h3>
         {% if draft.is_reply %}
         <span class="reply-badge">Reply Draft</span>
+        {% endif %} {% if draft.source %}
+        <span class="source-badge">
+          {% if draft.source.type == 'email' %}
+          <i class="fas fa-envelope"></i> From Newsletter {% elif
+          draft.source.type == 'web_search' %} <i class="fas fa-globe"></i> Web
+          Research {% endif %}
+        </span>
         {% endif %}
       </div>
 
-      {% if draft.is_reply and draft.original_post %}
-      <div class="original-post">
-        <div class="original-author">@{{ draft.original_post.author }}</div>
-        <div class="original-text">{{ draft.original_post.text }}</div>
-        <div class="original-timestamp">
-          {{ draft.original_post.timestamp }}
+      {% if draft.source and draft.source.type == 'email' %}
+      <div class="email-source">
+        <div class="email-header">
+          <div><strong>From:</strong> {{ draft.source.sender }}</div>
+          <div><strong>Subject:</strong> {{ draft.source.subject }}</div>
+          <div><strong>Date:</strong> {{ draft.source.date }}</div>
+        </div>
+        <div class="email-content">
+          <button class="toggle-email" onclick="toggleEmailContent(this)">
+            Show Email Content
+          </button>
+          <div class="email-body" style="display: none">
+            {{ draft.source.content }}
+          </div>
+        </div>
+      </div>
+      {% endif %} {% if draft.source and draft.source.type == 'web_search' %}
+      <div class="web-sources">
+        <div class="sources-header">
+          <button class="toggle-sources" onclick="toggleSources(this)">
+            Show Sources
+          </button>
+        </div>
+        <div class="sources-list" style="display: none">
+          <h4>Research Sources:</h4>
+          <ul>
+            {% for url in draft.source.urls %}
+            <li>
+              <a href="{{ url }}" target="_blank" rel="noopener noreferrer">
+                {{ url }}
+                <i class="fas fa-external-link-alt"></i>
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
         </div>
       </div>
       {% endif %}
@@ -160,8 +196,11 @@
       return;
     }
 
-    // Always sort by newest first initially
-    drafts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    // Sort drafts by created_at timestamp
+    drafts.sort((a, b) => {
+      // Default to newest first
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
 
     // Then apply any selected sort
     if (sortFilter.value !== "newest") {
@@ -190,15 +229,38 @@
                     ? '<span class="reply-badge">Reply Draft</span>'
                     : ""
                 }
+                ${
+                  draft.source
+                    ? `
+                    <span class="source-badge">
+                        ${
+                          draft.source.type === "email"
+                            ? '<i class="fas fa-envelope"></i> From Newsletter'
+                            : '<i class="fas fa-pencil"></i> Manual Draft'
+                        }
+                    </span>
+                `
+                    : ""
+                }
             </div>
 
             ${
-              draft.is_reply && draft.original_post
+              draft.source && draft.source.type === "email"
                 ? `
-                <div class="original-post">
-                    <div class="original-author">@${draft.original_post.author}</div>
-                    <div class="original-text">${draft.original_post.text}</div>
-                    <div class="original-timestamp">${draft.original_post.timestamp}</div>
+                <div class="email-source">
+                    <div class="email-header">
+                        <div><strong>From:</strong> ${draft.source.sender}</div>
+                        <div><strong>Subject:</strong> ${draft.source.subject}</div>
+                        <div><strong>Date:</strong> ${draft.source.date}</div>
+                    </div>
+                    <div class="email-content">
+                        <button class="toggle-email" onclick="toggleEmailContent(this)">
+                            Show Email Content
+                        </button>
+                        <div class="email-body" style="display: none;">
+                            ${draft.source.content}
+                        </div>
+                    </div>
                 </div>
             `
                 : ""
@@ -231,7 +293,7 @@
                 <button class="button secondary edit-draft" onclick="toggleEditMode('${
                   draft._id
                 }')">
-                    <span class="button-text">Edit <i class="fa-solid fa-pen"></i></span>
+                    <span class="button-text">Edit</span>
                     <span class="button-loader" style="display: none;">
                         <i class="fas fa-spinner fa-spin"></i>
                     </span>
@@ -567,5 +629,83 @@
       setButtonLoading(button, false);
     }
   }
+
+  function toggleEmailContent(button) {
+    const emailBody = button.nextElementSibling;
+    if (emailBody.style.display === "none") {
+      emailBody.style.display = "block";
+      button.textContent = "Hide Email Content";
+    } else {
+      emailBody.style.display = "none";
+      button.textContent = "Show Email Content";
+    }
+  }
+
+  function toggleSources(button) {
+    const sourcesList = button
+      .closest(".web-sources")
+      .querySelector(".sources-list");
+    if (sourcesList.style.display === "none") {
+      sourcesList.style.display = "block";
+      button.textContent = "Hide Sources";
+    } else {
+      sourcesList.style.display = "none";
+      button.textContent = "Show Sources";
+    }
+  }
+
+  // Call updateDraftsDisplay when page loads
+  document.addEventListener("DOMContentLoaded", async function () {
+    const response = await fetch("/get-drafts?type=all");
+    if (response.ok) {
+      const drafts = await response.json();
+      updateDraftsDisplay(drafts);
+    }
+  });
 </script>
+
+<style>
+  .source-badge {
+    font-size: 0.8em;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background-color: #e5e7eb;
+    margin-left: 8px;
+  }
+
+  .email-source {
+    margin: 10px 0;
+    padding: 10px;
+    background-color: #f3f4f6;
+    border-radius: 4px;
+  }
+
+  .email-header {
+    margin-bottom: 10px;
+  }
+
+  .email-content {
+    margin-top: 10px;
+  }
+
+  .toggle-email {
+    background-color: #e5e7eb;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .toggle-email:hover {
+    background-color: #d1d5db;
+  }
+
+  .email-body {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: white;
+    border-radius: 4px;
+    white-space: pre-wrap;
+  }
+</style>
 {% endblock %}

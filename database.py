@@ -54,6 +54,7 @@ class Database:
         tweets: List[str],
         is_reply: bool = False,
         original_post: Optional[dict] = None,
+        source: Optional[dict] = None,  # Can be email or web sources
     ):
         """Save a draft thread to the database"""
         draft = {
@@ -63,6 +64,7 @@ class Database:
             "created_at": datetime.utcnow(),
             "is_reply": is_reply,
             "original_post": original_post,
+            "source": source,  # Can contain email data or list of websites
         }
         result = await self.client.newsletter_bot.draft_threads.insert_one(draft)
         return str(result.inserted_id)

@@ -358,8 +358,8 @@ async def view_drafts(request: Request):
         return RedirectResponse(url="/login")
 
     drafts = await db.get_user_drafts(user["email"])
-    print(f"User email: {user['email']}")
-    print(f"Drafts found: {drafts}")
+    # print(f"User email: {user['email']}")
+    # print(f"Drafts found: {drafts}")
 
     return templates.TemplateResponse(
         "drafts.html", {"request": request, "user": user, "drafts": drafts}
