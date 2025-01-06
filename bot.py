@@ -19,6 +19,17 @@ from database import Database  # Add at top of file
 import sys
 from web_search import research_topic
 
+# Default styles if user or writing style not found
+DEFAULT_THINKING_STYLE = """
+Analytical and Research-Oriented: The writer examines topics critically, using data and evidence to build arguments.
+Cause-and-Effect Reasoning: They explore how specific actions lead to broader consequences.
+"""
+
+DEFAULT_NARRATIVE_STYLE = """
+Engaging and Accessible: The writer uses conversational language to appeal to a broad audience.
+Descriptive and Vivid: They paint mental pictures with detailed imagery to make their points relatable.
+"""
+
 
 class BlueskyBot:
     def __init__(
@@ -107,7 +118,7 @@ class BlueskyBot:
         """Setup Gemini model"""
         GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
         genai.configure(api_key=GEMINI_API_KEY)
-        return genai.GenerativeModel("gemini-1.5-flash")
+        return genai.GenerativeModel("gemini-2.0-flash-exp")
 
     async def login_to_bluesky(self):
         """Login to Bluesky"""
@@ -177,66 +188,6 @@ class BlueskyBot:
                 body += self._get_message_body(part["parts"])
         return body
 
-    async def analyze_newsletter(self, email_data: Dict[str, Any]) -> bool:
-        """Analyze newsletter and process relevant topics"""
-        try:
-            if not self.user_email:
-                self.logger.error("No user email configured for bot")
-                return False
-
-            self.logger.info(f"Analyzing newsletter for user {self.user_email}")
-            self.logger.info(f"Auto-post setting: {self.auto_post}")
-
-            analysis = self.analyze_email_type(self.model, email_data, self.user_topics)
-
-            if (
-                not analysis
-                or analysis["type"] != "NEWSLETTER"
-                or not analysis["is_relevant"]
-            ):
-                self.logger.info("Newsletter analysis: not relevant")
-                return False
-
-            for topic in analysis["matching_topics"]:
-                self.logger.info(f"Processing topic: {topic}")
-                tweets = await self.create_topic_thread(topic, email_data["content"])
-                if tweets:
-                    if self.auto_post:
-                        self.logger.info(
-                            "Auto-post is enabled, attempting to post to Bluesky"
-                        )
-                        success = await self.post_thread_to_bluesky(tweets)
-                        if success:
-                            self.logger.info(
-                                f"Successfully auto-posted thread for topic {topic}"
-                            )
-                        else:
-                            self.logger.error(
-                                f"Failed to auto-post thread for topic {topic}"
-                            )
-                    else:
-                        self.logger.info("Auto-post is disabled, saving as draft")
-                        await self.db.save_draft_thread(
-                            user_email=self.user_email,
-                            topic=topic,
-                            tweets=tweets,
-                            source={
-                                "type": "email",
-                                "subject": email_data["subject"],
-                                "sender": email_data["sender"],
-                                "date": email_data["date"],
-                                "content": email_data["content"],
-                            },
-                        )
-                        self.logger.info(f"Saved draft for topic {topic}")
-
-            return True
-        except Exception as e:
-            self.logger.error(
-                f"Error analyzing newsletter for user {self.user_email}: {e}"
-            )
-            return False
-
     def is_new_email(self, date_str: str) -> bool:
         """Check if email is newer than bot start time"""
         try:
@@ -259,53 +210,6 @@ class BlueskyBot:
             self.logger.error(f"Error parsing date {date_str}: {e}")
             return False
 
-    async def post_thread_to_bluesky(self, posts: List[str]) -> bool:
-        """Post a thread of messages to Bluesky"""
-        try:
-            previous_post = None
-            root_post = None
-
-            for i, post in enumerate(posts):
-                try:
-                    if i == 0:
-                        # First post in thread
-                        response = self.client.send_post(text=post)
-                        root_post = response
-                        previous_post = response
-                        self.logger.info(f"✅ Posted thread starter: {post[:50]}...")
-                    else:
-                        if root_post is None or previous_post is None:
-                            self.logger.error(
-                                "Root or previous post not found, skipping reply"
-                            )
-                            continue
-                        # Reply to previous post with proper parent and root references
-                        response = self.client.send_post(
-                            text=post,
-                            reply_to={  # type: ignore
-                                "root": {"uri": root_post.uri, "cid": root_post.cid},
-                                "parent": {
-                                    "uri": previous_post.uri,
-                                    "cid": previous_post.cid,
-                                },
-                            },
-                        )
-                        previous_post = response
-                        self.logger.info(f"✅ Posted thread part {i+1}: {post[:50]}...")
-
-                    # Wait briefly between posts
-                    await asyncio.sleep(2)
-
-                except Exception as e:
-                    self.logger.error(f"Error posting part {i} of thread: {e}")
-                    return False
-
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Error posting thread: {e}")
-            return False
-
     async def monitor_gmail(self):
         """Monitor Gmail for new newsletters"""
         self.logger.info(f"Starting Gmail monitor for user {self.user_email}")
@@ -320,66 +224,133 @@ class BlueskyBot:
                 # Clean up old processed messages periodically
                 await self.db.cleanup_old_processed_messages()
 
+                # Keep the 1h filter but add better query parameters
                 results = (
                     self.gmail_service.users()
                     .messages()
-                    .list(userId="me", q="is:unread newer_than:1h", labelIds=["INBOX"])
+                    .list(
+                        userId="me",
+                        q="is:unread newer_than:1h",  # Keep focus on recent messages
+                        labelIds=["INBOX"],
+                        maxResults=50,  # Limit results for efficiency
+                    )
                     .execute()
                 )
 
                 messages = results.get("messages", [])
 
-                for message in messages:
-                    # Check if message was already processed using database
-                    is_processed = await self.db.is_message_processed(
-                        self.user_email, message["id"]
+                if messages:
+                    self.logger.info(
+                        f"Found {len(messages)} new unread messages from last hour"
                     )
+                else:
+                    self.logger.info("No new unread messages found")
 
-                    if not is_processed:
-                        email_data = self.process_email(message["id"])
+                for message in messages:
+                    try:
+                        # Check if message was already processed
+                        is_processed = await self.db.is_message_processed(
+                            self.user_email, message["id"]
+                        )
 
-                        if email_data and email_data.get("date"):
-                            if self.is_new_email(email_data["date"]):
-                                self.logger.info(
-                                    f"Processing new email for user {self.user_email}: {email_data['subject']}"
-                                )
-                                success = await self.analyze_newsletter(email_data)
+                        if not is_processed:
+                            email_data = self.process_email(message["id"])
 
-                                if success:
-                                    # Store processed message ID in database
-                                    await self.db.add_processed_message(
-                                        self.user_email, message["id"]
+                            if email_data and email_data.get("date"):
+                                if self.is_new_email(email_data["date"]):
+                                    self.logger.info(
+                                        f"Processing new email: Subject: {email_data['subject']}, "
+                                        f"From: {email_data['sender']}"
                                     )
-                                    # Mark as read in Gmail
-                                    self.gmail_service.users().messages().modify(
-                                        userId="me",
-                                        id=message["id"],
-                                        body={"removeLabelIds": ["UNREAD"]},
-                                    ).execute()
+                                    success = await self.analyze_newsletter(email_data)
 
+                                    if success:
+                                        await self.db.add_processed_message(
+                                            self.user_email, message["id"]
+                                        )
+                                        # Only mark as read if successfully processed
+                                        self.gmail_service.users().messages().modify(
+                                            userId="me",
+                                            id=message["id"],
+                                            body={"removeLabelIds": ["UNREAD"]},
+                                        ).execute()
+                                        self.logger.info(
+                                            f"Successfully processed and marked as read: {email_data['subject']}"
+                                        )
+                    except Exception as e:
+                        self.logger.error(f"Error processing message: {str(e)}")
+                        continue
+
+                # Wait before next check
                 await asyncio.sleep(self.check_interval)
 
             except Exception as e:
-                self.logger.error(
-                    f"Error in Gmail monitor for user {self.user_email}: {e}"
-                )
-                await asyncio.sleep(10)
+                self.logger.error(f"Error in Gmail monitor: {str(e)}")
+                await asyncio.sleep(10)  # Longer wait on error
 
-    async def run(self):
-        """Main bot loop"""
-        self.logger.info(f"\n=== Starting Bluesky Bot for {self.user_email} ===")
-
+    async def analyze_newsletter(self, email_data: Dict[str, Any]) -> bool:
+        """Analyze newsletter and process relevant topics"""
         try:
-            # Authenticate with both services
-            self.authenticate_gmail()
-            if not await self.login_to_bluesky():
-                return
+            if not self.user_email:
+                self.logger.error("No user email configured for bot")
+                return False
 
-            # Run Gmail monitoring and mention handling concurrently
-            await asyncio.gather(self.monitor_gmail(), self.monitor_mentions())
+            self.logger.info(f"Analyzing newsletter for user {self.user_email}")
+            self.logger.info(f"Auto-post setting: {self.auto_post}")
+
+            analysis = self.analyze_email_type(
+                model=self.model, email_data=email_data, user_topics=self.user_topics
+            )
+
+            if (
+                not analysis
+                or analysis["type"] != "NEWSLETTER"
+                or not analysis["is_relevant"]
+            ):
+                self.logger.info("Newsletter analysis: not relevant")
+                return False
+
+            for topic in analysis["matching_topics"]:
+                self.logger.info(f"Processing topic: {topic}")
+                tweets = await self.create_topic_thread(
+                    topic=topic, content=email_data["content"], email_data=email_data
+                )
+                if tweets:
+                    if self.auto_post:
+                        self.logger.info(
+                            "Auto-post is enabled, attempting to post to Bluesky"
+                        )
+                        success = await self.post_thread_to_bluesky(tweets)
+                        if success:
+                            self.logger.info(
+                                f"Successfully auto-posted thread for topic {topic}"
+                            )
+                        else:
+                            self.logger.error(
+                                f"Failed to auto-post thread for topic {topic}"
+                            )
+                    else:
+                        self.logger.info("Auto-post is disabled, saving as draft")
+                        # await self.db.save_draft_thread(
+                        #     user_email=self.user_email,
+                        #     topic=topic,
+                        #     tweets=tweets,
+                        #     source={
+                        #         "type": "email",
+                        #         "subject": email_data["subject"],
+                        #         "sender": email_data["sender"],
+                        #         "date": email_data["date"],
+                        #         "content": email_data["content"],
+                        #     },
+                        # )
+                        self.logger.info(f"Saved draft for topic {topic}")
+
+            return True
         except Exception as e:
-            self.logger.error(f"Critical error in bot main loop: {e}")
-            raise  # Re-raise to trigger BotManager error handling
+            self.logger.error(
+                f"Error analyzing newsletter for user {self.user_email}: {e}"
+            )
+            return False
 
     def analyze_email_type(self, model, email_data, user_topics: List[str]):
         """Analyze if an email is a newsletter and filter topics based on user preferences"""
@@ -431,6 +402,9 @@ class BlueskyBot:
 
                 return result
             else:
+                print("--------------------------------------------")
+                print("Could not parse JSON")
+                print("--------------------------------------------")
                 return {
                     "type": "ERROR",
                     "reason": "Could not parse JSON",
@@ -458,7 +432,8 @@ class BlueskyBot:
         try:
             # Ensure database is connected
             if not hasattr(self.db, "client"):
-                await self.db.connect_db()
+                # await self.db.connect_db()
+                raise Exception("Database not connected")
 
             # If content is not provided, do web search
             if not content:
@@ -466,7 +441,9 @@ class BlueskyBot:
                 content = search_results["content"]
                 sources = search_results["sources"]
 
-                tweets = await self.generate_thread_content(content)
+                tweets = await self.generate_thread_content(
+                    topic=topic, content=content
+                )
                 await self.db.save_draft_thread(
                     user_email=self.user_email,
                     topic=topic,
@@ -475,7 +452,9 @@ class BlueskyBot:
                 )
                 return tweets
             else:
-                tweets = await self.generate_thread_content(content)
+                tweets = await self.generate_thread_content(
+                    topic=topic, content=content
+                )
                 await self.db.save_draft_thread(
                     user_email=self.user_email,
                     topic=topic,
@@ -496,6 +475,123 @@ class BlueskyBot:
         except Exception as e:
             self.logger.error(f"Error creating topic thread: {e}")
             return []
+
+    async def generate_thread_content(
+        self, topic: str, content: str | List[str]
+    ) -> List[str]:
+        """Generate a thread of tweets from content"""
+        try:
+
+            # Get user's writing style
+            user = await self.db.get_user(self.user_email)
+            if not user:
+                raise Exception("User not found")
+
+            # Use default styles if user or writing_style not found
+            writing_style = user.get("writing_style", {}) if user else {}
+            thinking_style = writing_style.get("thinking_style", DEFAULT_THINKING_STYLE)
+            narrative_style = writing_style.get(
+                "narrative_style", DEFAULT_NARRATIVE_STYLE
+            )
+
+            prompt = f"""
+                Generate a cohesive thread of posts about {topic} based on the provided reference content.
+
+                Content Parameters:
+                - Reference material: {content}
+                - Thinking framework: {thinking_style}
+                - Narrative approach: {narrative_style}
+
+                Post Requirements:
+                - Maximum 300 characters per post
+                - Clear narrative progression
+                - Conversational, accessible tone
+                - Zero hashtags
+                - Plain text only (no formatting)
+                - Avoid post numbering or labels
+                - Include credible sources when relevant
+                - Start directly with first topic post
+                - Create smooth transitions between posts
+                - Use the same thinking style and narrative style as the user
+
+                Output Goals:
+                - Build reader engagement
+                - Maintain factual accuracy
+                - Present key insights clearly
+                - Spark discussion
+                - Balance education with entertainment
+                - Preserve source material integrity
+                - Adapt tone to target audience
+
+                Additional Considerations:
+                - Start with attention-grabbing opener
+                - End with compelling conclusion/call-to-action
+                - Vary sentence structure for rhythm
+                - Use active voice
+                - Incorporate relevant examples/analogies
+                - Break complex concepts into digestible pieces
+                """
+
+            response = self.model.generate_content(prompt)
+            if not response.text:
+                return []
+
+            # Split into individual tweets and clean them
+            tweets = [
+                tweet.strip() for tweet in response.text.split("\n") if tweet.strip()
+            ]
+            return [tweet for tweet in tweets if len(tweet) <= 300]
+
+        except Exception as e:
+            self.logger.error(f"Error generating thread content: {e}")
+            return []
+
+    async def post_thread_to_bluesky(self, posts: List[str]) -> bool:
+        """Post a thread of messages to Bluesky"""
+        try:
+            previous_post = None
+            root_post = None
+
+            for i, post in enumerate(posts):
+                try:
+                    if i == 0:
+                        # First post in thread
+                        response = self.client.send_post(text=post)
+                        root_post = response
+                        previous_post = response
+                        self.logger.info(f"✅ Posted thread starter: {post[:50]}...")
+                    else:
+                        if root_post is None or previous_post is None:
+                            self.logger.error(
+                                "Root or previous post not found, skipping reply"
+                            )
+                            continue
+                        # Reply to previous post with proper parent and root references
+                        response = self.client.send_post(
+                            text=post,
+                            reply_to={  # type: ignore
+                                "root": {"uri": root_post.uri, "cid": root_post.cid},
+                                "parent": {
+                                    "uri": previous_post.uri,
+                                    "cid": previous_post.cid,
+                                },
+                            },
+                        )
+                        previous_post = response
+                        self.logger.info(f"✅ Posted thread part {i+1}: {post[:50]}...")
+
+                    # Wait briefly between posts
+                    await asyncio.sleep(2)
+
+                except Exception as e:
+                    self.logger.error(f"Error posting part {i} of thread: {e}")
+                    return False
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error posting thread: {e}")
+            return False
 
     async def handle_mentions(self):
         """Monitor and reply to mentions using search endpoint"""
@@ -600,17 +696,6 @@ class BlueskyBot:
         if not user:
             raise Exception("User not found")
 
-        # Default styles if user or writing style not found
-        DEFAULT_THINKING_STYLE = """
-        Analytical and Research-Oriented: The writer examines topics critically, using data and evidence to build arguments.
-        Cause-and-Effect Reasoning: They explore how specific actions lead to broader consequences.
-        """
-
-        DEFAULT_NARRATIVE_STYLE = """
-        Engaging and Accessible: The writer uses conversational language to appeal to a broad audience.
-        Descriptive and Vivid: They paint mental pictures with detailed imagery to make their points relatable.
-        """
-
         # Use default styles if user or writing_style not found
         writing_style = user.get("writing_style", {}) if user else {}
         thinking_style = writing_style.get("thinking_style", DEFAULT_THINKING_STYLE)
@@ -670,34 +755,21 @@ class BlueskyBot:
                 )
                 await asyncio.sleep(120)  # Longer wait on error
 
-    async def generate_thread_content(self, content: str | List[str]) -> List[str]:
-        """Generate a thread of tweets from content"""
+    async def run(self):
+        """Main bot loop"""
+        self.logger.info(f"\n=== Starting Bluesky Bot for {self.user_email} ===")
+
         try:
-            prompt = f"""
-            Create a thread of posts from this content:
-            {content}
+            # Authenticate with both services
+            self.authenticate_gmail()
+            if not await self.login_to_bluesky():
+                return
 
-            Requirements:
-            - Each post must be under 300 characters
-            - Make it engaging and informative
-            - Use natural language
-            - Don't use hashtags
-            - Don't use markdown formatting
-            """
-
-            response = self.model.generate_content(prompt)
-            if not response.text:
-                return []
-
-            # Split into individual tweets and clean them
-            tweets = [
-                tweet.strip() for tweet in response.text.split("\n") if tweet.strip()
-            ]
-            return [tweet for tweet in tweets if len(tweet) <= 300]
-
+            # Run Gmail monitoring and mention handling concurrently
+            await asyncio.gather(self.monitor_gmail(), self.monitor_mentions())
         except Exception as e:
-            self.logger.error(f"Error generating thread content: {e}")
-            return []
+            self.logger.error(f"Critical error in bot main loop: {e}")
+            raise  # Re-raise to trigger BotManager error handling
 
 
 async def main():

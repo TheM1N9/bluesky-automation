@@ -26,7 +26,7 @@ from web_search import research_topic
 from bot import BlueskyBot
 
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")
-app = FastAPI()
+app = FastAPI(docs_url=None, redoc_url=None)
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
